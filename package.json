@@ -1,0 +1,62 @@
+{
+  "name": "emulatorsh",
+  "version": "0.1.0",
+  "description": "Launching Android emulators and iOS simulators from the shell, for humans.",
+  "license": "MIT",
+  "private": true,
+  "author": {
+    "name": "Christos S. Paschalidis",
+    "email": "christos.paschalidis.dev@gmail.com",
+    "url": "https://github.com/christos-pas"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/christos-pas/emulatorsh.git"
+  },
+  "bugs": {
+    "url": "https://github.com/christos-pas/emulatorsh/issues"
+  },
+  "homepage": "https://github.com/christos-pas/emulatorsh#readme",
+  "keywords": [
+    "emulatorsh",
+    "android",
+    "ios",
+    "emulator",
+    "simulator",
+    "avd",
+    "sdkmanager",
+    "xcode",
+    "cli"
+  ],
+  "type": "module",
+  "bin": {
+    "emulatorsh": "./dist/cli.js"
+  },
+  "files": [
+    "dist/cli.js",
+    "docs/screens/usage.gif",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node dist/cli.js",
+    "record-gif": "npm run build && node dist/demo/record-gif.js",
+    "refresh-demo-data": "npm run build && node dist/demo/refresh-data.js && npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/android/*.test.ts src/demo/*.test.ts src/ios/*.test.ts src/ui/*.test.ts src/devices/*.test.ts src/flows.test.ts",
+    "prepublishOnly": "npm run build && npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^22.13.10",
+    "gifenc": "^1.0.3",
+    "tsup": "^8.4.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.8.2"
+  }
+}
