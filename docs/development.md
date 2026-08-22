@@ -49,10 +49,12 @@ The publish job uses the GitHub Actions environment `npm`. Create it once under 
 Then, from a clean `main`:
 
 ```bash
-npm version patch   # or minor / major — bumps package.json, commits, and tags vX.Y.Z
-git push emulatorsh main --follow-tags
+npm run release              # patch: bump package.json, commit, tag vX.Y.Z
+npm run release -- minor
+npm run release -- major
+npm run release -- patch --push   # also git push --follow-tags
 ```
 
-Push `main` **before** the first tag if the workflow file is not on GitHub yet. Configure the Trusted Publisher **before** pushing `v0.1.1`, or the publish job will fail with `ENEEDAUTH`.
+`package.json` `"version"` is the only version number. `npm version` updates `package-lock.json` and the git tag. The CLI reads that same field (`emulatorsh --version`). Configure the Trusted Publisher before the first tag push, or the publish job will fail with `ENEEDAUTH`.
 
 `publishConfig.access` is `public` and `provenance` is `true`. `prepublishOnly` builds, typechecks, and runs tests first. CI (`.github/workflows/ci.yml`) runs typecheck and tests on every push and pull request to `main`.

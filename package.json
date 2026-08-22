@@ -52,7 +52,8 @@
     "refresh-demo-data": "npm run build && node dist/demo/refresh-data.js && npm run build",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/android/*.test.ts src/demo/*.test.ts src/ios/*.test.ts src/ui/*.test.ts src/devices/*.test.ts src/flows.test.ts",
-    "prepublishOnly": "npm run build && npm run typecheck && npm test"
+    "prepublishOnly": "npm run build && npm run typecheck && npm test",
+    "release": "node scripts/release.js"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

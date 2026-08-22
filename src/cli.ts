@@ -1,5 +1,6 @@
-import { createLiveRuntime } from "./runtime.js";
 import { main } from "./flows.js";
+import { createLiveRuntime } from "./runtime.js";
+import { packageVersion } from "./version.js";
 
 const HELP = `Usage: emulatorsh [--simulate] [--simulate-clear]
 
@@ -8,12 +9,13 @@ const HELP = `Usage: emulatorsh [--simulate] [--simulate-clear]
                     Creates ./demo.db if needed and stores SDKs you install
                     and devices you create or start.
   --simulate-clear  Delete ./demo.db and exit.
+  -V, --version     Print the version from package.json and exit.
   -h, --help        Show this help.
 `;
 
-const KNOWN = new Set(["--simulate", "--simulate-clear", "--help", "-h"]);
+const KNOWN = new Set(["--simulate", "--simulate-clear", "--help", "-h", "--version", "-V"]);
 
-function parseArgs(argv: string[]): { simulate: boolean; clear: boolean; help: boolean } {
+function parseArgs(argv: string[]): { simulate: boolean; clear: boolean; help: boolean; version: boolean } {
   const unknown = argv.filter((arg) => !KNOWN.has(arg));
   if (unknown.length > 0) {
     console.error(`Unknown argument: ${unknown[0]}`);
@@ -24,6 +26,7 @@ function parseArgs(argv: string[]): { simulate: boolean; clear: boolean; help: b
     simulate: argv.includes("--simulate"),
     clear: argv.includes("--simulate-clear"),
     help: argv.includes("--help") || argv.includes("-h"),
+    version: argv.includes("--version") || argv.includes("-V"),
   };
 }
 
@@ -31,6 +34,11 @@ const options = parseArgs(process.argv.slice(2));
 
 if (options.help) {
   process.stdout.write(HELP);
+  process.exit(0);
+}
+
+if (options.version) {
+  process.stdout.write(`${packageVersion()}\n`);
   process.exit(0);
 }
 
