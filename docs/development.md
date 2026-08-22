@@ -41,7 +41,10 @@ One-time setup on [the package settings](https://www.npmjs.com/package/emulators
 
 1. **Trusted Publisher** → GitHub Actions
 2. User `christos-pas`, repository `emulatorsh`, workflow filename `publish.yml` (filename only)
-3. Allowed action: `npm publish`
+3. Environment name: `npm`
+4. Allowed action: `npm publish`
+
+The publish job uses the GitHub Actions environment `npm`. Create it once under the repo **Settings → Environments** if it is not there yet.
 
 Then, from a clean `main`:
 
