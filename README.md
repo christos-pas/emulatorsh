@@ -4,7 +4,7 @@ Interactive terminal UI to **list, create, and launch** Android Virtual Devices 
 
 ![Usage](./docs/screens/usage.gif)
 
-Pick a platform, pick a device, and the process starts **detached** so you can close the terminal. On Android you can also install system images and create new AVDs without opening Android Studio.
+Pick a platform, pick a device, and boom! You have your emulator up and running. The Emulator process starts **detached** so you can safely close the terminal if you wish. You're missing an Android SDK? No problem, you can do it right from the console! On Android you can also install system images and create new AVDs without opening Android Studio. There's no typing, no need to copy or remember PIDs or device names, the console is interactive. You simply navigate with your keyboard. Yup... I know, I'm excited too!
 
 Teal `>` is the cursor. Green is **running** or **already installed**. On the platform list, `[running: 1/3]` is green when any device is up and gray when the count is `0`. Purple is a create/install action. Long lists split into **two columns** and paginate (`1/2 ↓ more`).
 
@@ -20,7 +20,7 @@ The Android Studio meanwhile kept changing how emulators launch. Sometimes the w
 
 iOS is not innocent either. `xcrun simctl` works, if you enjoy UDIDs. I was already in a terminal. I did not want to leave it.
 
-So I wrapped the tools I already had — `emulator`, `avdmanager`, `sdkmanager`, `simctl` — in one keyboard UI. Pick a platform, pick a device, it starts detached so closing the terminal does not kill the emulator. New Android devices get a hardware keyboard without me opening an ini file. Running devices are marked so I do not boot a second copy by mistake.
+So I wrapped the tools I already had — `emulator`, `avdmanager`, `sdkmanager`, `simctl` — in a single interactive keyboard UI. Pick a platform, pick a device, it starts detached so closing the terminal does not kill the emulator. New Android devices get a hardware keyboard without me opening an ini file. Running devices are marked so I do not boot a second copy by mistake.
 
 This is the tool I wished I had on the days I lost an hour to Device Manager. If you have lived that, it is for you too.
 
@@ -46,72 +46,12 @@ Installing an SDK skips the SDK list and opens the device list for that image. E
 
 ## Install
 
-This package is not published yet. From a clone:
-
-```bash
-cd ~/git/android-ios-emulators-cli
-npm install
-npm run build
-npm link
-```
-
-Then run:
-
-```bash
-emulatorsh
-```
-
-Demo mode (no Android SDK or Xcode; fixture devices from `src/demo/data.ts`):
-
-```bash
-emulatorsh --simulate
-emulatorsh --simulate-clear   # delete ./demo.db
-```
-
-`--simulate` uses the same listing/install/start code as a real run. Without `--simulate`, emulatorsh keeps **no local database or cache**: every list comes from `adb` / `emulator` / `sdkmanager` / `avdmanager` / `simctl` (and the SDK/AVD files those tools already own). The only writes are `hw.keyboard=yes` on a newly created AVD and emulator logs at `/tmp/emulator.log`.
-
-With `--simulate`, those CLIs are mocked and persist into gitignored `./demo.db`. The fixture in `src/demo/data.ts` is a snapshot of this machine. Rebuild it with `npm run refresh-demo-data`. Device profiles that do not support the selected SDK are hidden. `--simulate` needs **Node.js 22.5+** (`node:sqlite`). The live command still runs on Node 18.
-
-To rebuild `src/demo/data.ts` from the SDKs and devices on this machine (convenience only; not used at runtime):
-
-```bash
-npm run refresh-demo-data
-npm run refresh-demo-data -- --dry-run   # print counts without writing
-```
-
-That walks `sdkmanager --list` (all downloadable images, not only installed), `avdmanager` device definitions, and iOS / watchOS simulators, then writes the fixture that `--simulate` commits to git. Re-record the GIF afterwards if the menus change: `npm run record-gif`.
-
-Without linking:
-
-```bash
-npm start
-# or
-node dist/cli.js
-```
-
-When published on npm:
-
 ```bash
 npm install -g emulatorsh
 emulatorsh
 ```
 
-Requires **Node.js 18+**.
-
-## Keyboard
-
-| Key | Action |
-| --- | --- |
-| `↑` `↓` or `k` `j` | Move |
-| `←` `→` or `h` `l` | Move between columns (when the list is two-column) |
-| Enter | Select |
-| Escape | Back one step |
-| `c` | Close the selected **running** device (suspend or terminate) |
-| `q` or Ctrl+C | Quit |
-
-Lists with more than 8 items use **two columns** when the terminal is at least 72 characters wide. Long lists paginate (**20 items per page**). The footer shows `2/5 ↓ more`.
-
-Needs an **interactive TTY**. Piped or non-TTY stdin/stdout will exit with an error.
+Requires **Node.js 18+**. But let's be real, use **Node.js 22.5+** don't be a dino! 🦖 
 
 ## Environment
 
@@ -173,29 +113,47 @@ Devices come from `xcrun simctl list devices available -j`. **iOS** shows `iOS-<
 
 There is no “create simulator” flow: Apple devices are Xcode runtime definitions, not AVDs.
 
-## Development
+## Keyboard
+
+| Key | Action |
+| --- | --- |
+| `↑` `↓` or `k` `j` | Move |
+| `←` `→` or `h` `l` | Move between columns (when the list is two-column) |
+| Enter | Select |
+| Escape | Back one step |
+| `c` | Close the selected **running** device (suspend or terminate) |
+| `q` or Ctrl+C | Quit |
+
+Lists with more than 8 items use **two columns** when the terminal is at least 72 characters wide. Long lists paginate (**20 items per page**). The footer shows `2/5 ↓ more`.
+
+Needs an **interactive TTY**. Piped or non-TTY stdin/stdout will exit with an error.
+
+## Wanna play safely?
+
+No SDK, no Xcode, no problem. `--simulate` is a playground for the whole CLI — same menus, same keys — so you can try listing, creating, installing, launching, and closing without touching a real emulator or any of the tools those flows normally need.
+
+To run in simulation mode:
 
 ```bash
-npm install
-npm run dev         # tsup watch
-npm run build       # emit dist/cli.js
-npm run typecheck
-npm test
-npm run refresh-demo-data  # snapshot this machine's SDKs/devices into src/demo/data.ts
-npm run record-gif  # real TUI + mock backend → docs/screens/usage.gif
+emulatorsh --simulate
 ```
 
-`record-gif` and `--simulate` share the fixture in `src/demo/data.ts`. The GIF recorder still drives `main()` with scripted keys and an in-memory catalog (no SQLite). `--simulate` runs the same listing/install/start functions; `adb` / `emulator` / `sdkmanager` / `avdmanager` / `simctl` (and the SDK/AVD filesystem) are mocked and persist into `demo.db`. Rasterization is 2× SVG via `@resvg/resvg-js`, encoded with `gifenc`.
+You made too much mess in your playground? Nuke it and start over ;)
 
-Stack: **TypeScript** + **tsup** (esbuild). Runtime dependency-free; Node built-ins only. GIF tooling is dev-only.
+```bash
+emulatorsh --simulate-clear
+```
 
-## Publish to npm
+`--simulate` uses the same listing/install/start code as a real run. Without `--simulate`, emulatorsh keeps **no local database or cache**: every list comes from `adb` / `emulator` / `sdkmanager` / `avdmanager` / `simctl` (and the SDK/AVD files those tools already own). The only writes are `hw.keyboard=yes` on a newly created AVD and emulator logs at `/tmp/emulator.log`.
 
-1. Remove `"private": true` from `package.json` (if present).
-2. `npm login` and `npm publish --access public`.
+With `--simulate`, those CLIs are mocked and persist into gitignored `./demo.db`. The fixture in `src/demo/data.ts` is a snapshot of this machine. Device profiles that do not support the selected SDK are hidden. `--simulate` needs **Node.js 22.5+** (`node:sqlite`). The live command still runs on Node 18.
 
-`prepublishOnly` builds, typechecks, and runs tests first.
+Hacking on the CLI or cutting a release? See [Development](docs/development.md).
 
 ## License
 
 [MIT](./LICENSE) © [Christos S. Paschalidis](https://github.com/christos-pas)
+
+<a href="https://github.com/christos-pas">
+  <img src="https://github.com/christos-pas.png?size=96" width="96" height="96" alt="Christos S. Paschalidis" />
+</a>

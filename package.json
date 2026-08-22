@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Launching Android emulators and iOS simulators from the shell, for humans.",
   "license": "MIT",
-  "private": true,
   "author": {
     "name": "Christos S. Paschalidis",
     "email": "christos.paschalidis.dev@gmail.com",
@@ -38,6 +37,9 @@
     "LICENSE",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=18"
   },
