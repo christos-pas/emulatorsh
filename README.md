@@ -1,4 +1,4 @@
-# >_ emulatorsh📱
+# >_ emulatorsh📱 · [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![npm](https://img.shields.io/npm/v/emulatorsh.svg?color=black)](https://www.npmjs.com/package/emulatorsh) [![Release](https://img.shields.io/github/v/tag/christos-pas/emulatorsh?color=green)](https://github.com/christos-pas/emulatorsh/tags) [![CI](https://github.com/christos-pas/emulatorsh/actions/workflows/ci.yml/badge.svg)](https://github.com/christos-pas/emulatorsh/actions/workflows/ci.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 Interactive terminal UI to **list, create, and launch** Android Virtual Devices and iOS Simulators. The command is **`emulatorsh`**:, from the shell.
 
@@ -150,7 +150,7 @@ emulatorsh --simulate-clear
 
 With `--simulate`, those CLIs are mocked and persist into gitignored `./demo.db`. The fixture in `src/demo/data.ts` is a snapshot of this machine. Device profiles that do not support the selected SDK are hidden. `--simulate` needs **Node.js 22.5+** (`node:sqlite`). The live command still runs on Node 18.
 
-Hacking on the CLI or cutting a release? See [Development](docs/development.md).
+Want to send a fix or a feature? See [Contributing](CONTRIBUTING.md). Hacking or cutting a release? See [Development](docs/development.md).
 
 ## License
 
