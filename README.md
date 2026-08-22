@@ -8,7 +8,7 @@ Pick a platform, pick a device, and boom! You have your emulator up and running.
 
 Teal `>` is the cursor. Green is **running** or **already installed**. On the platform list, `[running: 1/3]` is green when any device is up and gray when the count is `0`. Purple is a create/install action. Long lists split into **two columns** and paginate (`1/2 ↓ more`).
 
-Version **0.1.0**. Licensed under [MIT](./LICENSE).
+Version **0.1.1**. Licensed under [MIT](./LICENSE).
 
 ## Why
 
@@ -51,7 +51,9 @@ npm install -g emulatorsh
 emulatorsh
 ```
 
-Requires **Node.js 18+**. But let's be real, use **Node.js 22.5+** don't be a dino! 🦖 
+Requires **Node.js 18+**. But let's be real, use **Node.js 22.5+** don't be a dino! 🦖
+
+A global install only puts `emulatorsh` on your PATH. No install scripts, no runtime npm dependencies, nothing phones home — it shells out to the Android / Xcode tools already on your machine. From **0.1.1** the [npm page](https://www.npmjs.com/package/emulatorsh) shows a Provenance check: that tarball was built from this repo on GitHub Actions.
 
 ## Environment
 

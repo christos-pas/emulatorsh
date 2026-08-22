@@ -35,22 +35,21 @@ Stack: **TypeScript** + **tsup** (esbuild). Runtime dependency-free; Node built-
 
 ## Publish to npm
 
-First release (`0.1.0` is already set):
+Releases are published from GitHub Actions (`.github/workflows/publish.yml`) with [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/). That attaches a Provenance attestation. Do not `npm publish` from a laptop for tagged releases.
 
-```bash
-npm login
-npm publish --dry-run
-npm publish --access public
-git tag -a v0.1.0 -m "v0.1.0"
-git push origin main --follow-tags
-```
+One-time setup on [the package settings](https://www.npmjs.com/package/emulatorsh/access):
 
-Later releases:
+1. **Trusted Publisher** → GitHub Actions
+2. User `christos-pas`, repository `emulatorsh`, workflow filename `publish.yml` (filename only)
+3. Allowed action: `npm publish`
+
+Then, from a clean `main`:
 
 ```bash
 npm version patch   # or minor / major — bumps package.json, commits, and tags vX.Y.Z
-npm publish --access public
-git push origin main --follow-tags
+git push emulatorsh main --follow-tags
 ```
 
-`publishConfig.access` is `public`. `prepublishOnly` builds, typechecks, and runs tests first.
+Push `main` **before** the first tag if the workflow file is not on GitHub yet. Configure the Trusted Publisher **before** pushing `v0.1.1`, or the publish job will fail with `ENEEDAUTH`.
+
+`publishConfig.access` is `public` and `provenance` is `true`. `prepublishOnly` builds, typechecks, and runs tests first. CI (`.github/workflows/ci.yml`) runs typecheck and tests on every push and pull request to `main`.

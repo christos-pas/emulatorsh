@@ -1,6 +1,6 @@
 {
   "name": "emulatorsh",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Launching Android emulators and iOS simulators from the shell, for humans.",
   "license": "MIT",
   "author": {
@@ -38,7 +38,8 @@
     "README.md"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "engines": {
     "node": ">=18"
