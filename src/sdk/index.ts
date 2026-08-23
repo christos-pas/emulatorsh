@@ -1,4 +1,5 @@
-import { createAvd, listAndroidAvds } from "./android/avds";
+import { listAndroidAvds } from "./android/avds";
+import { createFromRefs, type CreateOptions } from "./android/create";
 import {
   installSystemImage,
   listAvailableSystemImages,
@@ -7,73 +8,119 @@ import {
 import { listDeviceProfiles } from "./android/profiles";
 import { listIosSimulators, listWatchSimulators } from "./apple/simulators";
 import { EmulatorshError } from "./errors";
-import { suspendDevice, terminateDevice } from "./power";
+import { listPlatforms } from "./platforms";
+import { suspendAndroid, suspendApple, terminateAndroid } from "./power";
+import {
+  androidNameOf,
+  imagePackageOf,
+  resolveAndroidDevice,
+  resolveAppleDevice,
+} from "./resolve";
 import { startAndroid, startIos } from "./start";
-import type { FormFactor, MenuItem, SystemImage } from "./types";
-import { bindSystem, type System } from "../system";
+import type {
+  AndroidDevice,
+  AndroidRef,
+  AppleDevice,
+  AppleRef,
+  DeviceProfile,
+  FormFactor,
+  ImageRef,
+  Platform,
+  PlatformName,
+  SystemImage,
+} from "./types";
+import type { System } from "../system";
 
 export interface EmulatorshOptions {
   system: System;
 }
 
 export interface Emulatorsh {
+  platforms: {
+    list(): Platform[];
+  };
   android: {
-    list(): MenuItem[];
-    start(device: MenuItem): number;
-    create(image: SystemImage, profile: MenuItem): string;
-    suspend(device: MenuItem): void;
-    terminate(device: MenuItem): void;
+    list(): AndroidDevice[];
+    get(device: AndroidRef): AndroidDevice;
+    start(device: AndroidRef): number;
+    create(
+      image: SystemImage | string,
+      profile: DeviceProfile | string,
+      options?: CreateOptions,
+    ): Promise<AndroidDevice>;
+    suspend(device: AndroidRef): void;
+    terminate(device: AndroidRef): void;
     images: {
       listInstalled(formFactor: FormFactor): SystemImage[];
       listAvailable(formFactor: FormFactor): SystemImage[];
-      install(pkg: string): Promise<void>;
+      install(image: ImageRef): Promise<void>;
     };
     profiles: {
-      list(image: SystemImage, formFactor: FormFactor): MenuItem[];
+      list(image: SystemImage | string): DeviceProfile[];
     };
   };
   ios: {
-    list(): MenuItem[];
-    start(device: MenuItem): number;
-    suspend(device: MenuItem): void;
+    list(): AppleDevice[];
+    get(device: AppleRef): AppleDevice;
+    start(device: AppleRef): number;
+    suspend(device: AppleRef): void;
   };
   watchos: {
-    list(): MenuItem[];
-    start(device: MenuItem): number;
-    suspend(device: MenuItem): void;
+    list(): AppleDevice[];
+    get(device: AppleRef): AppleDevice;
+    start(device: AppleRef): number;
+    suspend(device: AppleRef): void;
   };
 }
 
 export function createEmulatorsh(options: EmulatorshOptions): Emulatorsh {
-  bindSystem(options.system);
+  const { system } = options;
   return {
+    platforms: {
+      list: () => listPlatforms(system),
+    },
     android: {
-      list: () => listAndroidAvds().filter((item) => !item.create),
-      start: startAndroid,
-      create: createAvd,
-      suspend: suspendDevice,
-      terminate: terminateDevice,
+      list: () => listAndroidAvds(system),
+      get: (device) => resolveAndroidDevice(system, device),
+      start: (device) => startAndroid(system, resolveAndroidDevice(system, device).name),
+      create: (image, profile, createOptions) => createFromRefs(system, image, profile, createOptions),
+      suspend: (device) => suspendAndroid(system, androidNameOf(device)),
+      terminate: (device) => terminateAndroid(system, androidNameOf(device)),
       images: {
-        listInstalled: listInstalledSystemImages,
-        listAvailable: listAvailableSystemImages,
-        install: installSystemImage,
+        listInstalled: (formFactor) => listInstalledSystemImages(system, formFactor),
+        listAvailable: (formFactor) => listAvailableSystemImages(system, formFactor),
+        install: (image) => installSystemImage(system, imagePackageOf(image)),
       },
       profiles: {
-        list: listDeviceProfiles,
+        list: (image) => listDeviceProfiles(system, image),
       },
     },
     ios: {
-      list: listIosSimulators,
-      start: startIos,
-      suspend: suspendDevice,
+      list: () => listIosSimulators(system),
+      get: (device) => resolveAppleDevice(system, "ios", device, { listed: true }),
+      start: (device) => startIos(system, resolveAppleDevice(system, "ios", device).id),
+      suspend: (device) => suspendApple(system, resolveAppleDevice(system, "ios", device).id),
     },
     watchos: {
-      list: listWatchSimulators,
-      start: startIos,
-      suspend: suspendDevice,
+      list: () => listWatchSimulators(system),
+      get: (device) => resolveAppleDevice(system, "watchos", device, { listed: true }),
+      start: (device) => startIos(system, resolveAppleDevice(system, "watchos", device).id),
+      suspend: (device) => suspendApple(system, resolveAppleDevice(system, "watchos", device).id),
     },
   };
 }
 
 export { EmulatorshError };
-export type { FormFactor, MenuItem, SystemImage };
+export type {
+  AndroidDevice,
+  AndroidRef,
+  AppleDevice,
+  AppleRef,
+  CreateOptions,
+  DeviceProfile,
+  FormFactor,
+  ImageRef,
+  Platform,
+  PlatformName,
+  SystemImage,
+};

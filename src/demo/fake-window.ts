@@ -5,9 +5,13 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { isWearSpec, specFromSysdir } from "../sdk/android/specs";
-import { rememberStoredFakeWindow, takeStoredFakeWindows } from "../simulate/store";
 
 export type FakeKind = "android" | "ios" | "wear";
+
+export interface FakeWindowPersist {
+  remember(deviceId: string, pid: number, dir?: string): void;
+  take(deviceId: string): { pid: number; dir?: string }[];
+}
 
 const ORANGE = "#ff8700";
 const MUTED = "#a6adc8";
@@ -45,7 +49,12 @@ type TrackedWindow = { pid: number; dir?: string };
 
 const fakeWindows = new Map<string, TrackedWindow[]>();
 
-export function openFakeEmulator(kind: FakeKind, title: string, deviceId = title): void {
+export function openFakeEmulator(
+  kind: FakeKind,
+  title: string,
+  deviceId = title,
+  persist?: FakeWindowPersist,
+): void {
   try {
     const label = title.trim() || "emulator";
     const svg = fakeEmulatorSvg(kind, label);
@@ -56,7 +65,7 @@ export function openFakeEmulator(kind: FakeKind, title: string, deviceId = title
     fs.writeFileSync(svgPath, svg);
     fs.writeFileSync(htmlPath, fakeEmulatorHtml(kind, label, svg));
     const pid = showWindow(kind, dir, htmlPath, svgPath, label);
-    rememberFakeWindow(deviceId, pid, dir);
+    rememberFakeWindow(deviceId, pid, dir, persist);
   } catch {
     // Best-effort chrome. Simulate still "starts" if a window cannot open.
   }
@@ -69,8 +78,8 @@ export function isFakeEmulatorCommand(command: string, dir?: string): boolean {
   return !dir || command.includes(dir);
 }
 
-export function closeFakeEmulator(deviceId: string): boolean {
-  const stored = takeStoredFakeWindows(deviceId);
+export function closeFakeEmulator(deviceId: string, persist?: FakeWindowPersist): boolean {
+  const stored = persist?.take(deviceId) ?? [];
   const tracked = [...(fakeWindows.get(deviceId) ?? []), ...stored];
   const dirs = [...new Set(tracked.map((row) => row.dir).filter((dir): dir is string => Boolean(dir)))];
   const candidates = new Map<number, string | undefined>();
@@ -93,14 +102,19 @@ export function closeFakeEmulator(deviceId: string): boolean {
   return closed;
 }
 
-function rememberFakeWindow(deviceId: string, pid?: number, dir?: string): void {
+function rememberFakeWindow(
+  deviceId: string,
+  pid?: number,
+  dir?: string,
+  persist?: FakeWindowPersist,
+): void {
   if (!pid) {
     return;
   }
   const windows = fakeWindows.get(deviceId) ?? [];
   windows.push({ pid, dir });
   fakeWindows.set(deviceId, windows);
-  rememberStoredFakeWindow(deviceId, pid, dir);
+  persist?.remember(deviceId, pid, dir);
 }
 
 function pidsUsingPath(dir: string): number[] {

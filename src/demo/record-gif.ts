@@ -6,6 +6,7 @@ import { GIFEncoder, applyPalette, quantize } from "gifenc";
 import { Resvg } from "@resvg/resvg-js";
 
 import { closeConfirmationItems } from "../cli/close";
+import { imageToItem } from "../cli/items";
 import { main } from "../cli/main";
 import { moveSelection, type ScriptedKey } from "../cli/ui/prompt";
 import { installSdkOption } from "../sdk/android/images";
@@ -336,12 +337,12 @@ async function record(): Promise<void> {
       keysToSelect(catalog.android, (item) => Boolean(item.create) || item.value === CREATE_VALUE, "Create new device"),
       keysToSelect(formFactors, (item) => item.value === "phone", "Mobile Phone"),
       keysToSelect(
-        [...catalog.installed.phone, installSdkOption()],
+        [...catalog.installed.phone.map(imageToItem), installSdkOption()],
         (item) => item.value === INSTALL_SDK_VALUE,
         "Install new SDK",
       ),
       keysToSelect(
-        catalog.available.phone,
+        catalog.available.phone.map(imageToItem),
         (item) => item.package === toInstall.package,
         toInstall.name,
       ),

@@ -23,7 +23,6 @@ function image(
   const pkg = `system-images;android-${api};${tag};${abi}`;
   return {
     name: imageDisplayName(api, tag, abi),
-    value: pkg,
     package: pkg,
     api,
     sysdir: `system-images/android-${api}/${tag}/${abi}`,

@@ -1,17 +1,10 @@
-import { createAvd, listAndroidAvds } from "../sdk/android/avds";
-import {
-  installSystemImage,
-  listAvailableSystemImages,
-  listInstalledSystemImages,
-} from "../sdk/android/images";
-import { listDeviceProfiles } from "../sdk/android/profiles";
+import { createEmulatorsh } from "../sdk";
+import { createNewDeviceOption } from "../sdk/android/avds";
 import { isAppleDeviceId } from "../sdk/apple/id";
-import { listIosSimulators, listWatchSimulators } from "../sdk/apple/simulators";
 import { BACK, BLUE, ORANGE, PAGE_SIZE, RESET, SIMULATE_BANNER } from "../sdk/constants";
-import { suspendDevice, terminateDevice } from "../sdk/power";
-import { startAndroid, startIos } from "../sdk/start";
-import type { FormFactor, MenuItem, SystemImage } from "../sdk/types";
-import { isSandbox } from "../system/context";
+import type { DeviceProfile, FormFactor, MenuItem, SystemImage } from "../sdk/types";
+import type { System } from "../system/types";
+import { androidToItem, appleToItem, imageToItem, platformToItem, profileToItem } from "./items";
 import type { CloseRequest } from "./close";
 import { playSimulateSdkInstall } from "./ui/install-progress";
 import { prompt, useTwoColumns, type PromptOptions, type ScriptedKey } from "./ui/prompt";
@@ -23,14 +16,16 @@ export interface PickOptions {
 }
 
 export interface Runtime {
+  readonly simulate: boolean;
+  listPlatforms(): MenuItem[];
   listAndroidAvds(): MenuItem[];
   listIosSimulators(): MenuItem[];
   listWatchSimulators(): MenuItem[];
-  listInstalledSystemImages(formFactor: FormFactor): SystemImage[];
-  listAvailableSystemImages(formFactor: FormFactor): SystemImage[];
-  listDeviceProfiles(image: SystemImage, formFactor: FormFactor): MenuItem[];
+  listInstalledSystemImages(formFactor: FormFactor): MenuItem[];
+  listAvailableSystemImages(formFactor: FormFactor): MenuItem[];
+  listDeviceProfiles(image: SystemImage): MenuItem[];
   installSystemImage(pkg: string, label?: string): Promise<void>;
-  createAvd(image: SystemImage, device: MenuItem): string;
+  createAvd(image: SystemImage, device: MenuItem): Promise<string>;
   startAndroid(device: MenuItem): number;
   startIos(device: MenuItem): number;
   suspendDevice(device: MenuItem): void | Promise<void>;
@@ -72,41 +67,54 @@ export function runningSummary(devices: MenuItem[]): { running: number; total: n
   };
 }
 
-export function createLiveRuntime(promptOptions: PromptOptions = {}): Runtime {
+export function createLiveRuntime(system: System, promptOptions: PromptOptions = {}): Runtime {
+  const emulatorsh = createEmulatorsh({ system });
   return {
-    listAndroidAvds,
-    listIosSimulators,
-    listWatchSimulators,
-    listInstalledSystemImages,
-    listAvailableSystemImages,
-    listDeviceProfiles,
+    simulate: system.kind === "sandbox",
+    listPlatforms: () => emulatorsh.platforms.list().map(platformToItem),
+    listAndroidAvds: () => [...emulatorsh.android.list().map(androidToItem), createNewDeviceOption()],
+    listIosSimulators: () => emulatorsh.ios.list().map(appleToItem),
+    listWatchSimulators: () => emulatorsh.watchos.list().map(appleToItem),
+    listInstalledSystemImages: (formFactor) =>
+      emulatorsh.android.images.listInstalled(formFactor).map(imageToItem),
+    listAvailableSystemImages: (formFactor) =>
+      emulatorsh.android.images.listAvailable(formFactor).map(imageToItem),
+    listDeviceProfiles: (image) => emulatorsh.android.profiles.list(image).map(profileToItem),
     async installSystemImage(pkg, label) {
       const name = label || pkg;
       process.stdout.write(`\nInstalling ${name}...\n`);
-      if (isSandbox()) {
+      if (system.kind === "sandbox") {
         await playSimulateSdkInstall(pkg);
       }
-      await installSystemImage(pkg);
+      await emulatorsh.android.images.install(pkg);
       process.stdout.write(`\nInstalled ${name}.\n`);
     },
-    createAvd,
-    startAndroid,
-    startIos,
+    async createAvd(image, device) {
+      const created = await emulatorsh.android.create(image, menuProfile(device));
+      return created.name;
+    },
+    startAndroid: (device) => emulatorsh.android.start(device.value),
+    startIos: (device) => emulatorsh.ios.start({ id: device.value }),
     async suspendDevice(device) {
+      const suspend = () => {
+        if (isAppleDeviceId(device.value)) {
+          emulatorsh.ios.suspend({ id: device.value });
+          return;
+        }
+        emulatorsh.android.suspend(device.value);
+      };
       if (isAppleDeviceId(device.value)) {
-        suspendDevice(device);
+        suspend();
         return;
       }
       await playSuspendProgress(device.name, {
-        onStart: () => {
-          suspendDevice(device);
-        },
+        onStart: suspend,
       });
     },
-    terminateDevice,
+    terminateDevice: (device) => emulatorsh.android.terminate(device.value),
     async pick(title, items, options) {
       const heading = menuHeading(title, items, options);
-      if (isSandbox()) {
+      if (system.kind === "sandbox") {
         process.stdout.write(`${ORANGE}${SIMULATE_BANNER}${RESET}\n`);
       }
       process.stdout.write(`${heading}\n\n`);
@@ -145,3 +153,12 @@ export function createLiveRuntime(promptOptions: PromptOptions = {}): Runtime {
 }
 
 export type { ScriptedKey };
+
+function menuProfile(device: MenuItem): DeviceProfile {
+  return {
+    id: device.value,
+    name: device.name,
+    avdName: device.avdName || device.name,
+    installedCount: device.installedCount ?? 0,
+  };
+}

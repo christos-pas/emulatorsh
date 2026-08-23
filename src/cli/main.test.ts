@@ -34,6 +34,12 @@ test("close confirmation adds the orange simulation note", () => {
 
 function mockRuntime(overrides: Partial<Runtime>): Runtime {
   return {
+    simulate: false,
+    listPlatforms: () => [
+      { name: "Android", value: "android", runningSummary: { running: 0, total: 0 } },
+      { name: "iOS", value: "ios", runningSummary: { running: 0, total: 0 } },
+      { name: "watchOS", value: "watchos", runningSummary: { running: 0, total: 0 } },
+    ],
     listAndroidAvds: () => [],
     listIosSimulators: () => [],
     listWatchSimulators: () => [],
@@ -41,7 +47,7 @@ function mockRuntime(overrides: Partial<Runtime>): Runtime {
     listAvailableSystemImages: () => [],
     listDeviceProfiles: () => [],
     installSystemImage: async () => undefined,
-    createAvd: () => "",
+    createAvd: async () => "",
     startAndroid: () => 1,
     startIos: () => 1,
     suspendDevice: () => undefined,

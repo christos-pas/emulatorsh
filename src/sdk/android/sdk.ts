@@ -1,41 +1,40 @@
 import os from "node:os";
 import path from "node:path";
 
-import { getSystem } from "../../system/context";
 import { runFile } from "../../system/exec";
 import { existsSync } from "../../system/fs";
+import type { System } from "../../system/types";
 
-export function homeDir(): string {
-  return getSystem().paths.homeDir();
+export function homeDir(system: System): string {
+  return system.paths.homeDir();
 }
 
-export function sdkRootCandidates(): string[] {
-  const system = getSystem();
+export function sdkRootCandidates(system: System): string[] {
   return [
     system.env.get("ANDROID_SDK_ROOT"),
     system.env.get("ANDROID_HOME"),
-    path.join(homeDir(), "Library/Android/sdk"),
-    path.join(homeDir(), "Android/Sdk"),
+    path.join(homeDir(system), "Library/Android/sdk"),
+    path.join(homeDir(system), "Android/Sdk"),
   ].filter((candidate): candidate is string => Boolean(candidate));
 }
 
-export function emulatorCandidates(): string[] {
+export function emulatorCandidates(system: System): string[] {
   return [
-    ...sdkRootCandidates().map((root) => path.join(root, "emulator", "emulator")),
+    ...sdkRootCandidates(system).map((root) => path.join(root, "emulator", "emulator")),
     "emulator",
   ];
 }
 
-export function firstExisting(candidates: string[]): string | null {
+export function firstExisting(system: System, candidates: string[]): string | null {
   for (const candidate of candidates) {
     if (candidate.includes(path.sep) || candidate.startsWith(".")) {
-      if (existsSync(candidate)) {
+      if (existsSync(system, candidate)) {
         return candidate;
       }
       continue;
     }
     try {
-      runFile(candidate, ["-help"], { stdio: "ignore" });
+      runFile(system, candidate, ["-help"], { stdio: "ignore" });
       return candidate;
     } catch {
       // not on PATH
@@ -44,24 +43,24 @@ export function firstExisting(candidates: string[]): string | null {
   return null;
 }
 
-export function resolveSdkRoot(): string | null {
-  return getSystem().paths.sdkRoot();
+export function resolveSdkRoot(system: System): string | null {
+  return system.paths.sdkRoot();
 }
 
-export function resolveAndroidEmulator(): string | null {
-  return getSystem().paths.emulator();
+export function resolveAndroidEmulator(system: System): string | null {
+  return system.paths.emulator();
 }
 
-export function resolveAdb(): string | null {
-  return getSystem().paths.adb();
+export function resolveAdb(system: System): string | null {
+  return system.paths.adb();
 }
 
-export function resolveAvdmanager(): string | null {
-  return getSystem().paths.avdmanager();
+export function resolveAvdmanager(system: System): string | null {
+  return system.paths.avdmanager();
 }
 
-export function resolveSdkmanager(): string | null {
-  return getSystem().paths.sdkmanager();
+export function resolveSdkmanager(system: System): string | null {
+  return system.paths.sdkmanager();
 }
 
 export function hostAbi(): "arm64-v8a" | "x86_64" {
@@ -73,6 +72,6 @@ export function apiSortKey(api: string): number {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
-export function avdHome(): string {
-  return getSystem().paths.avdHome();
+export function avdHome(system: System): string {
+  return system.paths.avdHome();
 }

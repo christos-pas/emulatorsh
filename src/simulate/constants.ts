@@ -10,4 +10,4 @@ export const DEMO_PIDS = {
   watchos: 41883,
 } as const;
 
-export const DEMO_DB_FILENAME = "demo.db";
+export const DEMO_DB_FILENAME = "db/demo.db";

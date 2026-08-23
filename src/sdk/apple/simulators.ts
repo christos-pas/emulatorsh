@@ -1,8 +1,8 @@
-import type { MenuItem } from "../types";
+import type { AppleDevice } from "../types";
 import { runFile } from "../../system/exec";
+import type { System } from "../../system/types";
 import {
   appleRuntimeFromKey,
-  iosVersionFromRuntime,
   type AppleOs,
 } from "./runtime";
 
@@ -24,21 +24,21 @@ interface SimctlList {
   devices?: Record<string, SimctlDevice[]>;
 }
 
-export function listIosSimulators(): MenuItem[] {
-  return listAppleSimulators("ios");
+export function listIosSimulators(system: System): AppleDevice[] {
+  return listAppleSimulators(system, "ios");
 }
 
-export function listWatchSimulators(): MenuItem[] {
-  return listAppleSimulators("watchos");
+export function listWatchSimulators(system: System): AppleDevice[] {
+  return listAppleSimulators(system, "watchos");
 }
 
-export function listAppleSimulators(os: AppleOs): MenuItem[] {
+export function listAppleSimulators(system: System, os: AppleOs): AppleDevice[] {
   try {
-    const raw = runFile("xcrun", ["simctl", "list", "devices", "available", "-j"], {
+    const raw = runFile(system, "xcrun", ["simctl", "list", "devices", "available", "-j"], {
       encoding: "utf8",
     });
     const parsed = JSON.parse(raw) as SimctlList;
-    const devices: MenuItem[] = [];
+    const devices: AppleDevice[] = [];
     for (const [runtimeKey, runtimeDevices] of Object.entries(parsed.devices || {})) {
       const runtime = appleRuntimeFromKey(runtimeKey);
       if (!runtime || runtime.os !== os) {
@@ -49,9 +49,10 @@ export function listAppleSimulators(os: AppleOs): MenuItem[] {
           continue;
         }
         devices.push({
-          name: `${device.name} (${runtime.label} ${runtime.version})`,
-          value: device.udid,
+          name: device.name,
+          id: device.udid,
           running: device.state === "Booted",
+          runtime: `${runtime.label} ${runtime.version}`,
         });
       }
     }

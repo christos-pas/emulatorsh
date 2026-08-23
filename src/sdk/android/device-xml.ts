@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
-import { isSandbox } from "../../system/context";
 import { apiInRange, parseApiLevelRange } from "./specs";
 import { resolveAvdmanager } from "./sdk";
+import type { System } from "../../system/types";
 
 export interface DeviceSoftware {
   id: string;
@@ -23,15 +23,15 @@ const JAR_XML = [
 
 let cached: Map<string, DeviceSoftware> | undefined;
 
-export function loadDeviceSoftware(): Map<string, DeviceSoftware> {
+export function loadDeviceSoftware(system: System): Map<string, DeviceSoftware> {
+  if (system.kind === "sandbox") {
+    return new Map();
+  }
   if (cached) {
     return cached;
   }
   cached = new Map();
-  if (isSandbox()) {
-    return cached;
-  }
-  for (const jar of sdklibJars()) {
+  for (const jar of sdklibJars(system)) {
     for (const entry of JAR_XML) {
       const xml = readZipText(jar, entry);
       if (xml) {
@@ -105,8 +105,8 @@ function mergeDeviceSoftware(into: Map<string, DeviceSoftware>, devices: DeviceS
   }
 }
 
-function sdklibJars(): string[] {
-  const avdmanager = resolveAvdmanager();
+function sdklibJars(system: System): string[] {
+  const avdmanager = resolveAvdmanager(system);
   if (!avdmanager || !avdmanager.includes(path.sep)) {
     return [];
   }

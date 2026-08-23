@@ -1,11 +1,50 @@
 export type FormFactor = "phone" | "wear";
 
+export type PlatformName = "android" | "ios" | "watchos";
+
+export interface Platform {
+  name: PlatformName;
+  installed: number;
+  running: number;
+}
+
 export type Direction = "up" | "down" | "left" | "right";
 
 export interface ImageSpec {
   api: string;
   tag: string;
 }
+
+export interface AndroidDevice {
+  name: string;
+  running: boolean;
+}
+
+export interface AppleDevice {
+  name: string;
+  id: string;
+  running: boolean;
+  runtime: string;
+}
+
+export interface SystemImage {
+  name: string;
+  package: string;
+  api: string;
+  installed?: boolean;
+  sysdir?: string;
+}
+
+export interface DeviceProfile {
+  id: string;
+  name: string;
+  avdName: string;
+  installedCount: number;
+}
+
+export type AndroidRef = string | Pick<AndroidDevice, "name">;
+export type AppleRef = string | Pick<AppleDevice, "id"> | Pick<AppleDevice, "name"> | AppleDevice;
+export type ImageRef = string | Pick<SystemImage, "package"> | SystemImage;
 
 export interface MenuItem {
   name: string;
@@ -28,12 +67,6 @@ export interface MenuItem {
   api?: string;
   sysdir?: string;
   supportedSdks?: ImageSpec[];
-}
-
-export interface SystemImage extends MenuItem {
-  package: string;
-  api: string;
-  sysdir?: string;
 }
 
 export interface DeviceDefinition {

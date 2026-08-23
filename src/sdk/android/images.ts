@@ -4,6 +4,7 @@ import { INSTALL_SDK_VALUE, MAX_AVAILABLE_SDKS, NON_PHONE_IMAGE, WEAR_IMAGE } fr
 import type { ExecOutputError, FormFactor, MenuItem, SystemImage } from "../types";
 import { runFile, spawnProcess } from "../../system/exec";
 import { existsSync, readdirSync, statSync } from "../../system/fs";
+import type { System } from "../../system/types";
 import { imageDisplayName } from "./format";
 import {
   apiSortKey,
@@ -11,6 +12,8 @@ import {
   resolveSdkRoot,
   resolveSdkmanager,
 } from "./sdk";
+import { specFromImage } from "./specs";
+import { EmulatorshError, ErrorCode } from "../errors";
 
 export { imageDisplayName };
 
@@ -26,6 +29,11 @@ export function matchesFormFactor(tag: string, formFactor: FormFactor): boolean 
   return formFactor === "wear" ? isWearSystemImage(tag) : isPhoneSystemImage(tag);
 }
 
+export function formFactorOf(image: SystemImage): FormFactor {
+  const tag = specFromImage(image)?.tag ?? "";
+  return isWearSystemImage(tag) ? "wear" : "phone";
+}
+
 export function installSdkOption(): MenuItem {
   return {
     name: "Install new SDK",
@@ -35,40 +43,39 @@ export function installSdkOption(): MenuItem {
   };
 }
 
-export function listInstalledSystemImages(formFactor: FormFactor): SystemImage[] {
-  const sdkRoot = resolveSdkRoot();
+export function listInstalledSystemImages(system: System, formFactor: FormFactor): SystemImage[] {
+  const sdkRoot = resolveSdkRoot(system);
   if (!sdkRoot) {
     return [];
   }
   const imagesRoot = path.join(sdkRoot, "system-images");
-  if (!existsSync(imagesRoot)) {
+  if (!existsSync(system, imagesRoot)) {
     return [];
   }
 
   const images: SystemImage[] = [];
-  for (const apiDir of readdirSync(imagesRoot)) {
+  for (const apiDir of readdirSync(system, imagesRoot)) {
     const apiPath = path.join(imagesRoot, apiDir);
-    if (!statSync(apiPath).isDirectory() || !apiDir.startsWith("android-")) {
+    if (!statSync(system, apiPath).isDirectory() || !apiDir.startsWith("android-")) {
       continue;
     }
     const api = apiDir.slice("android-".length);
-    for (const tag of readdirSync(apiPath)) {
+    for (const tag of readdirSync(system, apiPath)) {
       const tagPath = path.join(apiPath, tag);
-      if (!statSync(tagPath).isDirectory()) {
+      if (!statSync(system, tagPath).isDirectory()) {
         continue;
       }
       if (!matchesFormFactor(tag, formFactor)) {
         continue;
       }
-      for (const abi of readdirSync(tagPath)) {
+      for (const abi of readdirSync(system, tagPath)) {
         const abiPath = path.join(tagPath, abi);
-        if (!statSync(abiPath).isDirectory()) {
+        if (!statSync(system, abiPath).isDirectory()) {
           continue;
         }
         const pkg = `system-images;${apiDir};${tag};${abi}`;
         images.push({
           name: imageDisplayName(api, tag, abi),
-          value: pkg,
           package: pkg,
           api,
           sysdir: `system-images/${apiDir}/${tag}/${abi}`,
@@ -116,7 +123,6 @@ export function parseSdkmanagerSystemImages(
     const api = apiDir.slice("android-".length);
     packages.push({
       name: imageDisplayName(api, tag, imageAbi),
-      value: pkg,
       package: pkg,
       api,
     });
@@ -133,16 +139,16 @@ export function parseSdkmanagerSystemImages(
     .slice(0, limit);
 }
 
-export function listAvailableSystemImages(formFactor: FormFactor): SystemImage[] {
-  const sdkmanager = resolveSdkmanager();
-  const sdkRoot = resolveSdkRoot();
+export function listAvailableSystemImages(system: System, formFactor: FormFactor): SystemImage[] {
+  const sdkmanager = resolveSdkmanager(system);
+  const sdkRoot = resolveSdkRoot(system);
   if (!sdkmanager || !sdkRoot) {
     return [];
   }
 
   let output: string;
   try {
-    output = runFile(sdkmanager, ["--list", `--sdk_root=${sdkRoot}`], {
+    output = runFile(system, sdkmanager, ["--list", `--sdk_root=${sdkRoot}`], {
       encoding: "utf8",
       maxBuffer: 20 * 1024 * 1024,
     });
@@ -152,7 +158,7 @@ export function listAvailableSystemImages(formFactor: FormFactor): SystemImage[]
   }
 
   const installed = new Set(
-    listInstalledSystemImages(formFactor).map((image) => image.package),
+    listInstalledSystemImages(system, formFactor).map((image) => image.package),
   );
   return parseSdkmanagerSystemImages(output, formFactor).map((image) => ({
     ...image,
@@ -160,18 +166,21 @@ export function listAvailableSystemImages(formFactor: FormFactor): SystemImage[]
   }));
 }
 
-export function installSystemImage(pkg: string): Promise<void> {
-  const sdkmanager = resolveSdkmanager();
-  const sdkRoot = resolveSdkRoot();
+export function installSystemImage(system: System, pkg: string): Promise<void> {
+  const sdkmanager = resolveSdkmanager(system);
+  const sdkRoot = resolveSdkRoot(system);
   if (!sdkmanager || !sdkRoot) {
     return Promise.reject(
-      new Error("Could not find sdkmanager. Install Android SDK Command-line Tools."),
+      new EmulatorshError(
+        ErrorCode.NO_SDKMANAGER,
+        "Could not find sdkmanager. Install Android SDK Command-line Tools.",
+      ),
     );
   }
 
   return new Promise((resolve, reject) => {
     const args = [`--sdk_root=${sdkRoot}`, pkg];
-    const child = spawnProcess(sdkmanager, args, {
+    const child = spawnProcess(system, sdkmanager, args, {
       stdio: ["pipe", "inherit", "inherit"],
     });
     const ignorePipeErrors = (stream: NodeJS.WritableStream) => {
@@ -196,7 +205,7 @@ export function installSystemImage(pkg: string): Promise<void> {
         resolve();
         return;
       }
-      reject(new Error(`sdkmanager exited with code ${code}`));
+      reject(new EmulatorshError(ErrorCode.INSTALL_FAILED, `sdkmanager exited with code ${code}`));
     });
   });
 }

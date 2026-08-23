@@ -13,11 +13,11 @@ import {
   SIMULATE_NOTE,
 } from "../sdk/constants";
 import type { FormFactor, MenuItem, SystemImage } from "../sdk/types";
-import { isSandbox } from "../system/context";
 import { closeConfirmationItems, isCloseRequest } from "./close";
-import { runningSummary, type Runtime } from "./runtime";
+import { imageFromItem } from "./items";
+import type { Runtime } from "./runtime";
 
-export function startedMessage(detail: string, simulate = isSandbox()): string {
+export function startedMessage(detail: string, simulate = false): string {
   const note = simulate ? ` ${ORANGE}${SIMULATE_NOTE}${RESET}` : "";
   return `Started ${detail}${note}`;
 }
@@ -39,10 +39,8 @@ export async function installSdkFlow(
   }
 
   try {
-    if (!selected.package) {
-      throw new Error("Selected SDK is missing a package id.");
-    }
-    await runtime.installSystemImage(selected.package, selected.name);
+    const image = imageFromItem(selected);
+    await runtime.installSystemImage(image.package, image.name);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     runtime.error(`\nFailed to install SDK: ${message}`);
@@ -50,7 +48,8 @@ export async function installSdkFlow(
   }
 
   const installed = runtime.listInstalledSystemImages(formFactor);
-  return installed.find((image) => image.package === selected.package) ?? (selected as SystemImage);
+  const match = installed.find((image) => image.package === selected.package);
+  return match ? imageFromItem(match) : imageFromItem(selected);
 }
 
 function sdkPickIndex(items: MenuItem[], preferPackage?: string): number | undefined {
@@ -78,7 +77,7 @@ export async function pickInstalledSdk(
       return BACK;
     }
     if (!selected.installSdk) {
-      return selected as SystemImage;
+      return imageFromItem(selected);
     }
     const installed = await installSdkFlow(runtime, formFactor);
     if (installed === BACK) {
@@ -108,7 +107,7 @@ async function confirmClose(
   return "back";
 }
 
-export function closedMessage(action: "suspend" | "terminate", name: string, simulate = isSandbox()): string {
+export function closedMessage(action: "suspend" | "terminate", name: string, simulate = false): string {
   const note = simulate ? ` ${ORANGE}${SIMULATE_NOTE}${RESET}` : "";
   const text =
     action === "suspend"
@@ -141,10 +140,10 @@ async function pickDevice(
       try {
         if (action === "suspend") {
           await runtime.suspendDevice(picked.item);
-          runtime.log(closedMessage("suspend", picked.item.name));
+          runtime.log(closedMessage("suspend", picked.item.name, runtime.simulate));
         } else {
           runtime.terminateDevice(picked.item);
-          runtime.log(closedMessage("terminate", picked.item.name));
+          runtime.log(closedMessage("terminate", picked.item.name, runtime.simulate));
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -175,7 +174,7 @@ export async function createAndroidDevice(runtime: Runtime): Promise<void | type
       }
       preferPackage = image.package;
 
-      const profiles = runtime.listDeviceProfiles(image, formFactor.value as FormFactor);
+      const profiles = runtime.listDeviceProfiles(image);
       if (profiles.length === 0) {
         runtime.error("No device definitions found. Is avdmanager installed?");
         continue;
@@ -187,9 +186,9 @@ export async function createAndroidDevice(runtime: Runtime): Promise<void | type
       }
 
       runtime.write(`Creating ${device.avdName || device.name} on ${image.name}...\n`);
-      const avdName = runtime.createAvd(image, device);
+      const avdName = await runtime.createAvd(image, device);
       const pid = runtime.startAndroid({ name: avdName, value: avdName });
-      runtime.log(startedMessage(`${avdName} (pid ${pid}, detached). Logs: ${EMULATOR_LOG}`));
+      runtime.log(startedMessage(`${avdName} (pid ${pid}, detached). Logs: ${EMULATOR_LOG}`, runtime.simulate));
       return;
     }
   }
@@ -197,14 +196,7 @@ export async function createAndroidDevice(runtime: Runtime): Promise<void | type
 
 export async function main(runtime: Runtime): Promise<void> {
   while (true) {
-    const androidDevices = runtime.listAndroidAvds();
-    const iosDevices = runtime.listIosSimulators();
-    const watchDevices = runtime.listWatchSimulators();
-    const platform = await runtime.pick("Select a platform", [
-      { name: "Android", value: "android", runningSummary: runningSummary(androidDevices) },
-      { name: "iOS", value: "ios", runningSummary: runningSummary(iosDevices) },
-      { name: "watchOS", value: "watchos", runningSummary: runningSummary(watchDevices) },
-    ]);
+    const platform = await runtime.pick("Select a platform", runtime.listPlatforms());
     if (platform === BACK || isCloseRequest(platform)) {
       runtime.log("Cancelled.");
       runtime.exit(0);
@@ -227,7 +219,7 @@ export async function main(runtime: Runtime): Promise<void> {
         return;
       }
       const pid = runtime.startIos(device);
-      runtime.log(startedMessage(`${device.name} (pid ${pid}, detached).`));
+      runtime.log(startedMessage(`${device.name} (pid ${pid}, detached).`, runtime.simulate));
       return;
     }
 
@@ -247,7 +239,7 @@ export async function main(runtime: Runtime): Promise<void> {
     }
 
     const pid = runtime.startAndroid(device);
-    runtime.log(startedMessage(`${device.name} (pid ${pid}, detached). Logs: ${EMULATOR_LOG}`));
+    runtime.log(startedMessage(`${device.name} (pid ${pid}, detached). Logs: ${EMULATOR_LOG}`, runtime.simulate));
     return;
   }
 }

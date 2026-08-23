@@ -21,12 +21,13 @@ import {
   uniqueSpecs,
   type ImageSpec,
 } from "../sdk/android/specs";
-import { CREATE_VALUE } from "../sdk/constants";
-import { appleRuntimeFromKey } from "../sdk/apple/runtime";
 import { listIosSimulators, listWatchSimulators } from "../sdk/apple/simulators";
-import type { ExecOutputError, FormFactor, MenuItem } from "../sdk/types";
+import type { AppleDevice, ExecOutputError, FormFactor } from "../sdk/types";
 import { runFile } from "../system/exec";
+import { createHostSystem } from "../system/host";
 import type { DemoAvd, DemoIosDevice, DemoProfile, DemoWorld } from "./data";
+
+const system = createHostSystem();
 
 const BEGIN = "// <demo-fixture>";
 const END = "// </demo-fixture>";
@@ -46,13 +47,13 @@ function repoRootFrom(start: string): string {
 }
 
 function sdkmanagerOutput(): string {
-  const sdkmanager = resolveSdkmanager();
-  const sdkRoot = resolveSdkRoot();
+  const sdkmanager = resolveSdkmanager(system);
+  const sdkRoot = resolveSdkRoot(system);
   if (!sdkmanager || !sdkRoot) {
     throw new Error("Could not find sdkmanager. Install Android SDK Command-line Tools.");
   }
   try {
-    return runFile(sdkmanager, ["--list", `--sdk_root=${sdkRoot}`], {
+    return runFile(system, sdkmanager, ["--list", `--sdk_root=${sdkRoot}`], {
       encoding: "utf8",
       maxBuffer: 20 * 1024 * 1024,
     });
@@ -73,7 +74,7 @@ function availableSpecs(output: string, formFactor: FormFactor): ImageSpec[] {
 function installedSpecs(): ImageSpec[] {
   const fromDisk: ImageSpec[] = [];
   for (const formFactor of ["phone", "wear"] as const satisfies FormFactor[]) {
-    for (const image of listInstalledSystemImages(formFactor)) {
+    for (const image of listInstalledSystemImages(system, formFactor)) {
       const spec = specFromImage(image);
       if (spec) {
         fromDisk.push(spec);
@@ -83,40 +84,32 @@ function installedSpecs(): ImageSpec[] {
   return uniqueSpecs(fromDisk);
 }
 
-function snapshotApple(items: MenuItem[], fallbackOs: "iOS" | "watchOS"): DemoIosDevice[] {
-  const devices: DemoIosDevice[] = [];
-  for (const item of items) {
-    const match = item.name.match(/^(.*) \((iOS|watchOS) (.+)\)$/);
-    const name = match?.[1] ?? item.name;
-    const label = match?.[2] ?? fallbackOs;
-    const version = match?.[3];
-    const parsed = appleRuntimeFromKey(item.name);
+function snapshotApple(items: AppleDevice[], fallbackOs: "iOS" | "watchOS"): DemoIosDevice[] {
+  return items.map((device) => {
+    const match = device.runtime.match(/^(iOS|watchOS) (.+)$/);
+    const label = match?.[1] ?? fallbackOs;
+    const version = match?.[2];
     const runtime = version
       ? `${label}-${version.replaceAll(".", "-")}`
-      : parsed
-        ? `${parsed.label}-${parsed.version.replaceAll(".", "-")}`
-        : fallbackOs;
-    devices.push({
-      name,
-      value: item.value,
+      : fallbackOs;
+    return {
+      name: device.name,
+      value: device.id,
       runtime,
-    });
-  }
-  return devices;
+    };
+  });
 }
 
 function snapshotAvds(): DemoAvd[] {
-  const running = runningAndroidAvdNames();
-  const details = new Map(existingAvds().map((avd) => [avd.name, avd]));
-  return listAndroidAvds()
-    .filter((item) => !item.create && item.value !== CREATE_VALUE)
-    .map((item) => {
-      const detail = details.get(item.value);
+  const running = runningAndroidAvdNames(system);
+  const details = new Map(existingAvds(system).map((avd) => [avd.name, avd]));
+  return listAndroidAvds(system).map((item) => {
+      const detail = details.get(item.name);
       return {
-        name: item.value,
+        name: item.name,
         deviceName: detail?.deviceName ?? "",
         sysdir: detail?.sysdir ?? "",
-        running: running.has(item.value) || Boolean(item.running),
+        running: running.has(item.name) || Boolean(item.running),
       };
     });
 }
@@ -227,11 +220,11 @@ function replaceFixture(source: string, fixture: string): string {
 }
 
 function collectWorld(): DemoWorld {
-  const avdmanager = resolveAvdmanager();
+  const avdmanager = resolveAvdmanager(system);
   if (!avdmanager) {
     throw new Error("Could not find avdmanager. Install Android SDK Command-line Tools.");
   }
-  const listOutput = runFile(avdmanager, ["list", "device"], { encoding: "utf8" });
+  const listOutput = runFile(system, avdmanager, ["list", "device"], { encoding: "utf8" });
   const definitions = parseDeviceDefinitions(listOutput);
   const sdkOutput = sdkmanagerOutput();
   const phoneImages = availableSpecs(sdkOutput, "phone");
@@ -244,15 +237,15 @@ function collectWorld(): DemoWorld {
     ...installedSpecs(),
     ...androidAvds.map((avd) => specFromSysdir(avd.sysdir)).filter((spec): spec is ImageSpec => Boolean(spec)),
   ]);
-  const software = loadDeviceSoftware();
+  const software = loadDeviceSoftware(system);
   if (software.size === 0) {
     console.warn(
       "Could not read device definitions from the SDK (sdklib devices XML). Each profile will list every SDK for its form factor.",
     );
   }
   return {
-    ios: snapshotApple(listIosSimulators(), "iOS"),
-    watchos: snapshotApple(listWatchSimulators(), "watchOS"),
+    ios: snapshotApple(listIosSimulators(system), "iOS"),
+    watchos: snapshotApple(listWatchSimulators(system), "watchOS"),
     androidAvds,
     phoneImages,
     wearImages,

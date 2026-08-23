@@ -3,37 +3,33 @@ import path from "node:path";
 
 import { androidSerialForAvd } from "./android/avds";
 import { avdHome, resolveAdb } from "./android/sdk";
-import { isAppleDeviceId } from "./apple/id";
 import { runFile } from "../system/exec";
 import { rmSync } from "../system/fs";
-import type { MenuItem } from "./types";
+import type { System } from "../system/types";
+import { EmulatorshError, ErrorCode } from "./errors";
 
-export function suspendDevice(device: MenuItem): void {
-  if (isAppleDeviceId(device.value)) {
-    shutdownApple(device);
-    return;
-  }
+export function suspendAndroid(system: System, avdName: string): void {
   // Graceful close. Quick Boot saves a snapshot so the next start is not a cold boot.
-  killAndroidConsole(device);
+  killAndroidConsole(system, avdName);
 }
 
-export function terminateDevice(device: MenuItem): void {
-  if (isAppleDeviceId(device.value)) {
-    shutdownApple(device);
-    return;
-  }
+export function terminateAndroid(system: System, avdName: string): void {
   // Drop the current RAM session without saving it, then delete Quick Boot
   // snapshots so the next `emulator -avd` cold-boots. Disk images stay, so
   // installed apps and userdata are kept.
-  const killed = killEmulatorProcesses(device.value);
+  const killed = killEmulatorProcesses(avdName);
   try {
-    killAndroidConsole(device);
+    killAndroidConsole(system, avdName);
   } catch (error) {
     if (!killed) {
       throw error;
     }
   }
-  discardQuickBoot(device.value);
+  discardQuickBoot(system, avdName);
+}
+
+export function suspendApple(system: System, udid: string): void {
+  runFile(system, "xcrun", ["simctl", "shutdown", udid], { stdio: "ignore" });
 }
 
 export function emuOutputFailed(output: string): boolean {
@@ -41,41 +37,43 @@ export function emuOutputFailed(output: string): boolean {
   return /^KO\b/m.test(text) || /unknown command/i.test(text);
 }
 
-export function avdSnapshotsDir(avdName: string): string {
-  return path.join(avdHome(), `${avdName}.avd`, "snapshots");
+export function avdSnapshotsDir(avdName: string, home: string): string {
+  return path.join(home, `${avdName}.avd`, "snapshots");
 }
 
-function requireAdb(): string {
-  const adb = resolveAdb();
+function requireAdb(system: System): string {
+  const adb = resolveAdb(system);
   if (!adb) {
-    throw new Error("Could not find adb. Is the Android SDK platform-tools installed?");
+    throw new EmulatorshError(
+      ErrorCode.NO_ADB,
+      "Could not find adb. Is the Android SDK platform-tools installed?",
+    );
   }
   return adb;
 }
 
-function requireSerial(device: MenuItem): string {
-  const serial = androidSerialForAvd(device.value);
+function requireSerial(system: System, avdName: string): string {
+  const serial = androidSerialForAvd(system, avdName);
   if (!serial) {
-    throw new Error(`Could not find a running emulator for ${device.name}.`);
+    throw new EmulatorshError(
+      ErrorCode.DEVICE_NOT_FOUND,
+      `Could not find a running emulator for ${avdName}.`,
+    );
   }
   return serial;
 }
 
-function killAndroidConsole(device: MenuItem): void {
-  const adb = requireAdb();
-  const serial = requireSerial(device);
-  const output = runFile(adb, ["-s", serial, "emu", "kill"], { encoding: "utf8" });
+function killAndroidConsole(system: System, avdName: string): void {
+  const adb = requireAdb(system);
+  const serial = requireSerial(system, avdName);
+  const output = runFile(system, adb, ["-s", serial, "emu", "kill"], { encoding: "utf8" });
   if (emuOutputFailed(output)) {
-    throw new Error(output.trim() || `adb emu kill failed for ${device.name}.`);
+    throw new Error(output.trim() || `adb emu kill failed for ${avdName}.`);
   }
 }
 
-function shutdownApple(device: MenuItem): void {
-  runFile("xcrun", ["simctl", "shutdown", device.value], { stdio: "ignore" });
-}
-
-function discardQuickBoot(avd: string): void {
-  rmSync(avdSnapshotsDir(avd));
+function discardQuickBoot(system: System, avd: string): void {
+  rmSync(system, avdSnapshotsDir(avd, avdHome(system)));
 }
 
 function killEmulatorProcesses(avd: string): boolean {

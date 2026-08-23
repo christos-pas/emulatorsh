@@ -1,6 +1,6 @@
 # >_ emulatorsh📱 · [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE) [![npm](https://img.shields.io/npm/v/emulatorsh.svg?color=black)](https://www.npmjs.com/package/emulatorsh) [![Release](https://img.shields.io/github/v/tag/christos-pas/emulatorsh?color=green)](https://github.com/christos-pas/emulatorsh/tags) [![CI](https://github.com/christos-pas/emulatorsh/actions/workflows/ci.yml/badge.svg)](https://github.com/christos-pas/emulatorsh/actions/workflows/ci.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Interactive terminal UI to **list, create, and launch** Android Virtual Devices and iOS Simulators. The command is **`emulatorsh`**:, from the shell.
+Interactive terminal UI to **list, create, and launch** Android Virtual Devices and iOS Simulators. The CLI command is **`emulatorsh`** from the shell. Or **`import emulatorsh;`** in your code and use it as an SDK! 🤓
 
 ![Usage](./docs/screens/usage.gif)
 
@@ -10,15 +10,15 @@ Teal `>` is the cursor. Green is **running** or **already installed**. On the pl
 
 Licensed under [MIT](./LICENSE).
 
-## Why
+## But why, Chris?
 
-I got tired of opening Android Studio just to boot a Pixel.
+I got tired of opening Android Studio just to boot a Pixel. 😫 I wanted a convenient IDE agnostic way that's actually made for humans. 😊
 
-Creating an AVD meant clicking through Device Manager, waiting on a system image, then discovering the hardware keyboard was off — so every login screen, every text field, I was poking at a fake on-screen keyboard. Turning `hw.keyboard=yes` meant hunting `config.ini` by hand. Doing that once is annoying. Doing it every time I needed a clean API level or a Wear device was a waste of an afternoon.
+Creating an AVD meant clicking through Device Manager, waiting on a system image, then discovering the hardware keyboard was off — so every login screen, every text field, I was poking at a fake on-screen keyboard. Why is that hard? Why is this keyboard menu moving on every major Android version? Turning `hw.keyboard=yes` and hunting `config.ini` by hand ends up being the only working option on new devices. Doing that once is annoying. Doing it every time I needed a clean API level or a Wear device was a waste of an afternoon.
 
 The Android Studio meanwhile kept changing how emulators launch. Sometimes the window is its own process. Sometimes it boots *inside* the IDE and I still don't fully know why — a setting, a toolbar button, a new Device Manager. I just wanted a device running so I could run tests, not debug the IDE.
 
-iOS is not innocent either. `xcrun simctl` works, if you enjoy UDIDs. I was already in a terminal. I did not want to leave it.
+iOS is not innocent either. `xcrun simctl` works, if you enjoy UDIDs. I was already in a terminal. I did not want to leave it. I'm only human after all, dear Apple, don't put the blame on me...
 
 So I wrapped the tools I already had — `emulator`, `avdmanager`, `sdkmanager`, `simctl` — in a single interactive keyboard UI. Pick a platform, pick a device, it starts detached so closing the terminal does not kill the emulator. New Android devices get a hardware keyboard without me opening an ini file. Running devices are marked so I do not boot a second copy by mistake.
 
@@ -28,7 +28,7 @@ No runtime npm dependencies. It shells out to the SDK and Xcode on your machine.
 
 ## What it does
 
-1. Asks **Android**, **iOS**, or **watchOS**, each with `[running: n/total]` (green if any are up, gray if none).
+1. Asks **Android**, **iOS**, or **watchOS**, each with `[running: n/total]` indicator.
 
    <img src="./docs/screens/what-platforms.gif" width="420" alt="Platform list with running counts" />
 
@@ -40,7 +40,7 @@ No runtime npm dependencies. It shells out to the SDK and Xcode on your machine.
 
    <img src="./docs/screens/what-android.gif" width="420" alt="Android AVD list with one running device" />
 
-4. On a device list, **`c`** closes the highlighted running device: **Back** returns to the list; **Suspend** or **Terminate** runs the command and exits. Android **Suspend** is a graceful `adb emu kill` so Quick Boot can save a snapshot (next start is not a cold boot). **Terminate** force-kills the emulator and deletes that AVD’s Quick Boot snapshots so the next start is a cold boot — installed apps and userdata stay; it is not a wipe. iOS and watchOS only offer **Suspend** (`simctl shutdown` — it keeps the simulator disk, like a soft shutdown). In `--simulate`, that updates `demo.db` and closes the fake window if it is still open.
+4. On a device list, **`c`** closes the highlighted running device: **Back** returns to the list; **Suspend** or **Terminate** runs the command and exits. Android **Suspend** is a graceful `adb emu kill` so Quick Boot can save a snapshot (next start is not a cold boot). **Terminate** force-kills the emulator and deletes that AVD’s Quick Boot snapshots so the next start is a cold boot — installed apps and userdata stay; it is not a wipe. iOS and watchOS only offer **Suspend** (`simctl shutdown` — it keeps the simulator disk, like a soft shutdown). In `--simulate`, that updates `db/demo.db` and closes the fake window if it is still open.
 
    <img src="./docs/screens/what-close.gif" width="420" alt="Suspend a running watchOS simulator, then a running Android AVD" />
 
@@ -57,13 +57,10 @@ The default import talks to **your machine**:
 ```ts
 import emulatorsh from "emulatorsh";
 
-const pixel = emulatorsh.android.list().find((device) => device.value === "Pixel_9_API_36");
-if (pixel && !pixel.running) {
-  emulatorsh.android.start(pixel);
-}
+emulatorsh.android.start("Pixel_9_API_36");
 ```
 
-`device.value` is the AVD name on Android, and the simulator UDID on iOS / watchOS. `device.running` is the green `[running]` you already know from the menus.
+`start` takes a device from `list()`, or a string — AVD name on Android, UDID or simulator name on iOS / watchOS.
 
 [Learn more in the SDK guide](./docs/sdk.md) — launch, create, install, and a sandbox for tests.
 
@@ -71,7 +68,7 @@ if (pixel && !pixel.running) {
 
 1. Form factor: **Mobile Phone** or **Wear**.
 2. Installed system image (or purple **Install new SDK**).
-3. Device profile, shown as `Pixel_9_Pro_API_36` for the selected SDK. Already-created copies show `[installed: n]`. A `_2` / `_3` suffix is added only when creating, if that name is already taken.
+3. Device profile, shown as `Pixel_9_Pro_API_36` for the selected SDK. Already-created copies show `[installed: n]`.
 4. Creates the AVD with `avdmanager`, enables `hw.keyboard=yes`, and starts it.
 
 If no Wear or phone system image is installed, the SDK list shows orange `No SDK installed` plus **Install new SDK**.
@@ -158,7 +155,7 @@ There is no “create simulator” flow: Apple devices are Xcode runtime definit
 | Enter | Select |
 | Escape | Back one step |
 | `c` | Close the selected **running** device (suspend or terminate) |
-| `q` or Ctrl+C | Quit |
+| `q` or Ctrl+C | Quit CLI |
 
 Lists with more than 8 items use **two columns** when the terminal is at least 72 characters wide. Long lists paginate (**20 items per page**). The footer shows `2/5 ↓ more`.
 

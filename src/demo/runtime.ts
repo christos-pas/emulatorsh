@@ -1,10 +1,12 @@
 import { proposedAvdName, sanitizeAvdName } from "../sdk/android/format";
+import { formFactorOf } from "../sdk/android/images";
 import { profileSupportsImage, sysdirMatchesImage } from "../sdk/android/specs";
 import { isAppleDeviceId } from "../sdk/apple/id";
 import { BACK } from "../sdk/constants";
 import type { FormFactor, MenuItem } from "../sdk/types";
 import { DEMO, DEMO_PIDS, createDemoCatalog, type DemoCatalog } from "../simulate/data";
-import { menuHeading, type Runtime } from "../cli/runtime";
+import { menuHeading, runningSummary, type Runtime } from "../cli/runtime";
+import { imageToItem, platformToItem } from "../cli/items";
 import { prompt, type RenderFrame, type ScriptedKey } from "../cli/ui/prompt";
 import { suspendHeading, suspendProgressBar } from "../cli/ui/suspend-progress";
 
@@ -104,13 +106,20 @@ export function createDemoRuntime(options: {
   };
 
   return {
+    simulate: true,
+    listPlatforms: () =>
+      (["android", "ios", "watchos"] as const).map((name) => {
+        const devices = name === "android" ? catalog.android : name === "ios" ? catalog.ios : catalog.watchos;
+        const summary = runningSummary(devices);
+        return platformToItem({ name, installed: summary.total, running: summary.running });
+      }),
     listAndroidAvds: () => catalog.android,
     listIosSimulators: () => catalog.ios,
     listWatchSimulators: () => catalog.watchos,
-    listInstalledSystemImages: (formFactor) => catalog.installed[formFactor],
-    listAvailableSystemImages: (formFactor) => catalog.available[formFactor],
-    listDeviceProfiles: (image, formFactor) =>
-      catalog.profiles[formFactor]
+    listInstalledSystemImages: (formFactor) => catalog.installed[formFactor].map(imageToItem),
+    listAvailableSystemImages: (formFactor) => catalog.available[formFactor].map(imageToItem),
+    listDeviceProfiles: (image) =>
+      catalog.profiles[formFactorOf(image)]
         .filter((profile) => profileSupportsImage(profile.supportedSdks, image))
         .map((profile) => ({
           name: profile.name,
@@ -169,7 +178,7 @@ export function createDemoRuntime(options: {
       }
       pushOutput([{ text: `Installed ${name}.`, fill: "#a6e3a1" }], 0.7);
     },
-    createAvd(image, device) {
+    async createAvd(image, device) {
       const taken = catalog.android.filter((item) => !item.create).map((item) => item.name);
       return proposedAvdName(device.name, image.api, taken);
     },

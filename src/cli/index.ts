@@ -1,4 +1,3 @@
-import { createEmulatorsh } from "../sdk";
 import { createHostSystem } from "../system/host";
 import { packageVersion } from "../version";
 import { main } from "./main";
@@ -8,15 +7,15 @@ const HELP = `Usage: emulatorsh [--simulate] [--simulate-clear]
 
   --simulate        Interactive demo. Same menus as a real run, but adb,
                     emulator, sdkmanager, avdmanager, and simctl are mocked.
-                    Creates ./demo.db if needed and stores SDKs you install
+                    Creates ./db/demo.db if needed and stores SDKs you install
                     and devices you create or start.
-  --simulate-clear  Delete ./demo.db and exit.
+  --simulate-clear  Delete ./db/demo.db and exit.
   -V, --version     Print the version from package.json and exit.
   -h, --help        Show this help.
 `;
 
 const KNOWN = new Set(["--simulate", "--simulate-clear", "--help", "-h", "--version", "-V"]);
-const DEMO_DB = "./demo.db";
+const DEMO_DB = "./db/demo.db";
 
 function parseArgs(argv: string[]): { simulate: boolean; clear: boolean; help: boolean; version: boolean } {
   const unknown = argv.filter((arg) => !KNOWN.has(arg));
@@ -56,23 +55,27 @@ async function boot(): Promise<void> {
   if (options.simulate) {
     const { createSandboxSystem } = await import("../simulate");
     const { closeFakeEmulator, openFakeEmulator } = await import("../demo/fake-window");
-    createEmulatorsh({
-      system: createSandboxSystem({
-        os: "macos",
-        storage: DEMO_DB,
-        onDeviceStart: (kind, title, deviceId) => {
-          openFakeEmulator(kind, title, deviceId);
-        },
-        onDeviceStop: (deviceId) => {
-          closeFakeEmulator(deviceId);
-        },
-      }),
+    type FakeWindowPersist = import("../demo/fake-window").FakeWindowPersist;
+    let persist: FakeWindowPersist | undefined;
+    const system = createSandboxSystem({
+      os: "macos",
+      storage: DEMO_DB,
+      onDeviceStart: (kind, title, deviceId) => {
+        openFakeEmulator(kind, title, deviceId, persist);
+      },
+      onDeviceStop: (deviceId) => {
+        closeFakeEmulator(deviceId, persist);
+      },
     });
-  } else {
-    createEmulatorsh({ system: createHostSystem() });
+    persist = {
+      remember: (id, pid, dir) => system.store.rememberFakeWindow(id, pid, dir),
+      take: (id) => system.store.takeFakeWindows(id),
+    };
+    await main(createLiveRuntime(system));
+    return;
   }
 
-  await main(createLiveRuntime());
+  await main(createLiveRuntime(createHostSystem()));
 }
 
 void boot();

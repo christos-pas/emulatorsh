@@ -10,7 +10,7 @@ test("adb emu KO output is treated as failure", () => {
 });
 
 test("Quick Boot snapshots live under the AVD folder", () => {
-  assert.match(avdSnapshotsDir("Pixel_9_API_36"), /Pixel_9_API_36\.avd[/\\]snapshots$/);
+  assert.match(avdSnapshotsDir("Pixel_9_API_36", "/tmp/avd"), /Pixel_9_API_36\.avd[/\\]snapshots$/);
 });
 
 test("AVD process matching does not treat _2 as the same device", () => {

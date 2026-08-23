@@ -11,66 +11,99 @@ The default import talks to **your machine**:
 ```ts
 import emulatorsh from "emulatorsh";
 
-const pixel = emulatorsh.android.list().find((device) => device.value === "Pixel_9_API_36");
-if (pixel && !pixel.running) {
-  emulatorsh.android.start(pixel);
-}
+emulatorsh.android.start("Pixel_9_API_36");
 ```
-
-`device.value` is the AVD name on Android, and the simulator UDID on iOS / watchOS. `device.running` is the green `[running]` you already know from the menus.
 
 Prefer a named factory? `import { createEmulatorsh, emulatorsh } from "emulatorsh"` is the same live client.
 
-## Launch, pause, kill
+The CLI is menus on top of this. Every device operation it can do is here.
+
+## Platforms
+
+The first CLI screen, without the prompt:
 
 ```ts
-emulatorsh.android.start(pixel);
-emulatorsh.android.suspend(pixel);   // graceful close — next boot can Quick Boot
-emulatorsh.android.terminate(pixel); // cold boot next time; apps and userdata stay
-
-const iphone = emulatorsh.ios.list().find((device) => device.name.includes("iPhone 16"));
-if (iphone) {
-  emulatorsh.ios.start(iphone);
-  emulatorsh.ios.suspend(iphone);    // simctl shutdown — Apple has no terminate
-}
-
-const watch = emulatorsh.watchos.list()[0];
-if (watch) {
-  emulatorsh.watchos.start(watch);
-  emulatorsh.watchos.suspend(watch);
-}
+emulatorsh.platforms.list();
+// [
+//   { name: "android", installed: 4, running: 1 },
+//   { name: "ios", installed: 2, running: 0 },
+//   { name: "watchos", installed: 1, running: 0 },
+// ]
 ```
 
-## New Android device, no Android Studio
+`name` is `"android"` | `"ios"` | `"watchos"`. `installed` is how many devices exist. `running` is how many are up. All three rows are always there — Apple is zeros on Linux / Windows.
+
+## List / inspect
 
 ```ts
-let image = emulatorsh.android.images.listInstalled("phone")[0];
-if (!image) {
-  const toInstall = emulatorsh.android.images.listAvailable("phone").find((item) => !item.installed);
-  if (!toInstall) {
-    throw new Error("No phone system image to install.");
-  }
-  await emulatorsh.android.images.install(toInstall.package);
-  image = emulatorsh.android.images.listInstalled("phone").find((item) => item.package === toInstall.package);
-}
-if (!image) {
-  throw new Error("No phone system image installed.");
-}
-
-const profiles = emulatorsh.android.profiles.list(image, "phone");
-const profile = profiles.find((item) => item.value === "pixel_9") ?? profiles[0];
-if (!profile) {
-  throw new Error("No phone profile for that image.");
-}
-
-const name = emulatorsh.android.create(image, profile); // hardware keyboard on
-const created = emulatorsh.android.list().find((device) => device.value === name);
-if (created) {
-  emulatorsh.android.start(created);
-}
+emulatorsh.android.list();
+emulatorsh.ios.list();
+emulatorsh.watchos.list();
 ```
 
-Form factor is `"phone"` or `"wear"`. Creating does **not** auto-start — call `start` when you want the window. Installing a system image is the one call that returns a `Promise`.
+Each item includes `running`. `get` returns that same object, or throws — the CLI never calls it; it just lists.
+
+```ts
+const pixel = emulatorsh.android.get("Pixel_9_API_36");
+const phone = emulatorsh.ios.get("iPhone 16");          // or a UDID, or "iPhone 16 (iOS 18.4)"
+```
+
+## Run / stop
+
+`start` / `suspend` / `terminate` take a device from `list()`, or a string: AVD name on Android, UDID **or** simulator name on iOS / watchOS. If several simulators share a name, pass the labeled name or the UDID.
+
+```ts
+emulatorsh.android.start("Pixel_9_API_36");
+emulatorsh.android.suspend("Pixel_9_API_36");   // graceful close — next boot can Quick Boot
+emulatorsh.android.terminate("Pixel_9_API_36"); // cold boot next time; apps and userdata stay
+
+if (!pixel.running) {
+  emulatorsh.android.start(pixel);
+}
+
+emulatorsh.ios.start("iPhone 16");
+emulatorsh.ios.suspend("iPhone 16");            // simctl shutdown — Apple has no terminate
+
+emulatorsh.watchos.start("Apple Watch Series 10");
+emulatorsh.watchos.suspend("Apple Watch Series 10");
+```
+
+## New Android device directly from the SDK
+
+This is the extra CLI wizard: form factor → system image → skin → create → start.
+
+```ts
+emulatorsh.android.images.listInstalled("phone"); // or "wear"
+emulatorsh.android.images.listAvailable("phone");
+await emulatorsh.android.images.install(image);
+
+emulatorsh.android.profiles.list("36");          // or a listed image
+const created = await emulatorsh.android.create(image, profile);
+emulatorsh.android.start(created);
+```
+
+If you already know the names, skip the lists. The client checks that the profile exists and that the SDK is installed:
+
+```ts
+const created = await emulatorsh.android.create("36", "Pixel_9");
+emulatorsh.android.start(created);
+```
+
+`"Pixel_9"` / `"Pixel 9"` / `"pixel_9"` all work. The SDK can be an API (`"36"`, `"API 36"`), a display name (`API 36 — google_apis_playstore (arm64-v8a)`), or a `system-images;...` package. If several images share that API, playstore wins.
+
+Not installed yet? Download it first:
+
+```ts
+const created = await emulatorsh.android.create("36", "Pixel 9", { installDeps: true });
+```
+
+`profiles.list` uses the same lookup. Phone vs wear comes from the image tag — no second argument:
+
+```ts
+const profile = emulatorsh.android.profiles.list("36").find((item) => item.id === "pixel_9");
+```
+
+Creating does **not** auto-start. `create` always returns a `Promise` and a device, or throws. Hardware keyboard is on.
 
 ## Playground, for tests
 
@@ -81,10 +114,18 @@ import { createEmulatorsh } from "emulatorsh";
 import { createSandboxSystem } from "emulatorsh/simulate";
 
 const demo = createEmulatorsh({
-  system: createSandboxSystem({ os: "macos", storage: "./demo.db" }),
+  system: createSandboxSystem({ os: "macos", storage: "./db/demo.db" }),
 });
 
+demo.platforms.list();
 demo.android.list();
 ```
 
-`os` is `"macos"`, `"linux"`, or `"windows"`. Apple simulators only exist on `"macos"` — a Windows sandbox is Android-only. Wipe the playground file when you are done, same idea as `emulatorsh --simulate-clear`. Sandbox needs **Node.js 22.5+**.
+Each client closes over its `system`. Two sandboxes never share devices, installs, or running flags:
+
+```ts
+const em1 = createEmulatorsh({ system: sys1 });
+const em2 = createEmulatorsh({ system: sys2 });
+```
+
+`os` is `"macos"`, `"linux"`, or `"windows"`. Apple simulators only exist on `"macos"` — a Windows sandbox is Android-only. Wipe `db/demo.db` when you are done, same idea as `emulatorsh --simulate-clear`. Sandbox needs **Node.js 22.5+**.

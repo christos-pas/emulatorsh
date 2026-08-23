@@ -1,23 +1,25 @@
 import path from "node:path";
 
 import { CREATE_VALUE } from "../constants";
-import type { ExistingAvd, ExecOutputError, MenuItem, SystemImage } from "../types";
+import type { AndroidDevice, DeviceProfile, ExistingAvd, ExecOutputError, MenuItem, SystemImage } from "../types";
 import { runFile } from "../../system/exec";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "../../system/fs";
+import type { System } from "../../system/types";
 import { nextUniqueName, sanitizeAvdName } from "./format";
 import { avdHome, resolveAdb, resolveAndroidEmulator, resolveAvdmanager } from "./sdk";
+import { EmulatorshError, ErrorCode } from "../errors";
 
 export { sanitizeAvdName };
 
-export function androidEmulatorSerials(): { serial: string; name: string }[] {
-  const adbBin = resolveAdb();
+export function androidEmulatorSerials(system: System): { serial: string; name: string }[] {
+  const adbBin = resolveAdb(system);
   if (!adbBin) {
     return [];
   }
 
   let devicesOutput: string;
   try {
-    devicesOutput = runFile(adbBin, ["devices"], { encoding: "utf8" });
+    devicesOutput = runFile(system, adbBin, ["devices"], { encoding: "utf8" });
   } catch {
     return [];
   }
@@ -32,7 +34,7 @@ export function androidEmulatorSerials(): { serial: string; name: string }[] {
   const devices: { serial: string; name: string }[] = [];
   for (const serial of serials) {
     try {
-      const name = runFile(adbBin, ["-s", serial, "emu", "avd", "name"], {
+      const name = runFile(system, adbBin, ["-s", serial, "emu", "avd", "name"], {
         encoding: "utf8",
       })
         .split(/\r?\n/)
@@ -48,12 +50,12 @@ export function androidEmulatorSerials(): { serial: string; name: string }[] {
   return devices;
 }
 
-export function androidSerialForAvd(avdName: string): string | null {
-  return androidEmulatorSerials().find((device) => device.name === avdName)?.serial ?? null;
+export function androidSerialForAvd(system: System, avdName: string): string | null {
+  return androidEmulatorSerials(system).find((device) => device.name === avdName)?.serial ?? null;
 }
 
-export function runningAndroidAvdNames(): Set<string> {
-  return new Set(androidEmulatorSerials().map((device) => device.name));
+export function runningAndroidAvdNames(system: System): Set<string> {
+  return new Set(androidEmulatorSerials(system).map((device) => device.name));
 }
 
 export function createNewDeviceOption(): MenuItem {
@@ -65,40 +67,35 @@ export function createNewDeviceOption(): MenuItem {
   };
 }
 
-export function listAndroidAvds(): MenuItem[] {
-  const emulatorBin = resolveAndroidEmulator();
-  const avds: MenuItem[] = [];
-  if (emulatorBin) {
-    try {
-      const output = runFile(emulatorBin, ["-list-avds"], {
-        encoding: "utf8",
-      });
-      const running = runningAndroidAvdNames();
-      for (const name of output
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)) {
-        avds.push({
-          name,
-          value: name,
-          emulatorBin,
-          running: running.has(name),
-        });
-      }
-    } catch {
-      // fall through and still offer create
-    }
+export function listAndroidAvds(system: System): AndroidDevice[] {
+  const emulatorBin = resolveAndroidEmulator(system);
+  if (!emulatorBin) {
+    return [];
   }
-  avds.push(createNewDeviceOption());
-  return avds;
+  try {
+    const output = runFile(system, emulatorBin, ["-list-avds"], {
+      encoding: "utf8",
+    });
+    const running = runningAndroidAvdNames(system);
+    return output
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((name) => ({
+        name,
+        running: running.has(name),
+      }));
+  } catch {
+    return [];
+  }
 }
 
-export function readIni(filePath: string): Record<string, string> {
-  if (!existsSync(filePath)) {
+export function readIni(system: System, filePath: string): Record<string, string> {
+  if (!existsSync(system, filePath)) {
     return {};
   }
   const values: Record<string, string> = {};
-  for (const line of readFileSync(filePath, "utf8").split(/\r?\n/)) {
+  for (const line of readFileSync(system, filePath, "utf8").split(/\r?\n/)) {
     const match = line.match(/^([^#=]+)=(.*)$/);
     if (match?.[1] && match[2] !== undefined) {
       values[match[1].trim()] = match[2].trim();
@@ -107,19 +104,19 @@ export function readIni(filePath: string): Record<string, string> {
   return values;
 }
 
-export function existingAvds(): ExistingAvd[] {
-  const dir = avdHome();
-  if (!existsSync(dir)) {
+export function existingAvds(system: System): ExistingAvd[] {
+  const dir = avdHome(system);
+  if (!existsSync(system, dir)) {
     return [];
   }
   const avds: ExistingAvd[] = [];
-  for (const entry of readdirSync(dir)) {
+  for (const entry of readdirSync(system, dir)) {
     if (!entry.endsWith(".ini")) {
       continue;
     }
-    const ini = readIni(path.join(dir, entry));
+    const ini = readIni(system, path.join(dir, entry));
     const avdPath = ini.path || path.join(dir, entry.replace(/\.ini$/, ".avd"));
-    const config = readIni(path.join(avdPath, "config.ini"));
+    const config = readIni(system, path.join(avdPath, "config.ini"));
     avds.push({
       name: entry.replace(/\.ini$/, ""),
       deviceName: config["hw.device.name"] || "",
@@ -129,37 +126,39 @@ export function existingAvds(): ExistingAvd[] {
   return avds;
 }
 
-export function uniqueAvdName(base: string, takenNames?: Iterable<string>): string {
+export function uniqueAvdName(system: System, base: string, takenNames?: Iterable<string>): string {
   return nextUniqueName(
     base,
-    takenNames ?? existingAvds().map((avd) => avd.name),
+    takenNames ?? existingAvds(system).map((avd) => avd.name),
   );
 }
 
-export function enableHardwareKeyboard(avdName: string): void {
-  const configPath = path.join(avdHome(), `${avdName}.avd`, "config.ini");
-  if (!existsSync(configPath)) {
+export function enableHardwareKeyboard(system: System, avdName: string): void {
+  const configPath = path.join(avdHome(system), `${avdName}.avd`, "config.ini");
+  if (!existsSync(system, configPath)) {
     throw new Error(`Created AVD is missing config.ini at ${configPath}`);
   }
-  let contents = readFileSync(configPath, "utf8");
+  let contents = readFileSync(system, configPath, "utf8");
   if (/^hw\.keyboard=/m.test(contents)) {
     contents = contents.replace(/^hw\.keyboard=.*$/m, "hw.keyboard=yes");
   } else {
     contents += `${contents.endsWith("\n") ? "" : "\n"}hw.keyboard=yes\n`;
   }
-  writeFileSync(configPath, contents);
+  writeFileSync(system, configPath, contents);
 }
 
-export function createAvd(image: SystemImage, device: MenuItem): string {
-  const avdmanager = resolveAvdmanager();
+export function createAvd(system: System, image: SystemImage, profile: DeviceProfile): string {
+  const avdmanager = resolveAvdmanager(system);
   if (!avdmanager) {
-    throw new Error(
+    throw new EmulatorshError(
+      ErrorCode.NO_AVDMANAGER,
       "Could not find avdmanager. Install Android SDK Command-line Tools.",
     );
   }
-  const avdName = uniqueAvdName(sanitizeAvdName(device.name, image.api));
+  const avdName = uniqueAvdName(system, sanitizeAvdName(profile.name, image.api));
   try {
     runFile(
+      system,
       avdmanager,
       [
         "create",
@@ -169,7 +168,7 @@ export function createAvd(image: SystemImage, device: MenuItem): string {
         "--package",
         image.package,
         "--device",
-        device.value,
+        profile.id,
       ],
       { encoding: "utf8", input: "no\n", stdio: ["pipe", "pipe", "pipe"] },
     );
@@ -179,8 +178,11 @@ export function createAvd(image: SystemImage, device: MenuItem): string {
       .filter(Boolean)
       .join("\n")
       .trim();
-    throw new Error(`Failed to create AVD ${avdName}.\n${details}`);
+    throw new EmulatorshError(
+      ErrorCode.CREATE_FAILED,
+      `Failed to create AVD ${avdName}.\n${details}`,
+    );
   }
-  enableHardwareKeyboard(avdName);
+  enableHardwareKeyboard(system, avdName);
   return avdName;
 }

@@ -23,7 +23,7 @@ import {
   MOCK_SDK_ROOT,
   MOCK_SDKMANAGER,
 } from "./paths";
-import { addStoredSdk, listStoredDevices, listStoredSdks, upsertStoredDevice } from "./store";
+import type { SandboxStore } from "./store";
 
 export type SandboxDeviceKind = "android" | "ios" | "wear";
 
@@ -31,48 +31,6 @@ export interface SandboxHooks {
   os?: HostOs;
   onDeviceStart?(kind: SandboxDeviceKind, title: string, deviceId: string): void;
   onDeviceStop?(deviceId: string): void;
-}
-
-let hooks: SandboxHooks = {};
-
-export function configureSandboxTools(next: SandboxHooks = {}): void {
-  hooks = next;
-}
-
-function sandboxOs(): HostOs {
-  return hooks.os ?? "macos";
-}
-
-function deviceKind(
-  name: string,
-  meta?: { sysdir?: string; deviceName?: string },
-): Exclude<SandboxDeviceKind, "ios"> {
-  const spec = meta?.sysdir ? specFromSysdir(meta.sysdir) : null;
-  if (
-    (spec && isWearSpec(spec)) ||
-    /wear/i.test(`${name} ${meta?.deviceName ?? ""} ${meta?.sysdir ?? ""}`)
-  ) {
-    return "wear";
-  }
-  return "android";
-}
-
-const fileWrites = new Map<string, string>();
-
-function hostAbi(): "arm64-v8a" | "x86_64" {
-  return os.arch() === "arm64" ? "arm64-v8a" : "x86_64";
-}
-
-function toolBase(bin: string): string {
-  return path.basename(bin);
-}
-
-function flagValue(args: string[], flag: string): string | undefined {
-  const index = args.indexOf(flag);
-  if (index === -1) {
-    return undefined;
-  }
-  return args[index + 1];
 }
 
 export function parseSystemImagePackage(pkg: string): {
@@ -98,11 +56,50 @@ export function parseSystemImagePackage(pkg: string): {
   };
 }
 
+export function createSandboxTools(options: SandboxHooks & { store: SandboxStore }) {
+  const hooks = options;
+  const store = options.store;
+  const fileWrites = new Map<string, string>();
+
+  function sandboxOs(): HostOs {
+    return hooks.os ?? "macos";
+  }
+
+  function deviceKind(
+    name: string,
+    meta?: { sysdir?: string; deviceName?: string },
+  ): Exclude<SandboxDeviceKind, "ios"> {
+    const spec = meta?.sysdir ? specFromSysdir(meta.sysdir) : null;
+    if (
+      (spec && isWearSpec(spec)) ||
+      /wear/i.test(`${name} ${meta?.deviceName ?? ""} ${meta?.sysdir ?? ""}`)
+    ) {
+      return "wear";
+    }
+    return "android";
+  }
+
+  function hostAbi(): "arm64-v8a" | "x86_64" {
+    return os.arch() === "arm64" ? "arm64-v8a" : "x86_64";
+  }
+
+  function toolBase(bin: string): string {
+    return path.basename(bin);
+  }
+
+  function flagValue(args: string[], flag: string): string | undefined {
+    const index = args.indexOf(flag);
+    if (index === -1) {
+      return undefined;
+    }
+    return args[index + 1];
+  }
+
 function installedPackages(): string[] {
   const abi = hostAbi();
   const names = new Set<string>([
     ...seedInstalledPackages(abi),
-    ...listStoredSdks(DEMO_PLATFORM.android).map((row) => row.name),
+        ...store.listStoredSdks(DEMO_PLATFORM.android).map((row) => row.name),
   ]);
   for (const device of DEMO.androidAvds) {
     const spec = specFromSysdir(device.sysdir);
@@ -114,7 +111,7 @@ function installedPackages(): string[] {
 }
 
 function androidDevices(): { name: string; deviceName: string; sysdir: string; running: boolean }[] {
-  const stored = listStoredDevices(DEMO_PLATFORM.android);
+  const stored = store.listStoredDevices(DEMO_PLATFORM.android);
   const byName = new Map(stored.map((row) => [row.name, row]));
   const names = new Set<string>();
   const devices: { name: string; deviceName: string; sysdir: string; running: boolean }[] = [];
@@ -201,7 +198,7 @@ function adbSerials(): { serial: string; name: string }[] {
 
 function markAndroidStopped(avd: string): void {
   const device = androidDevices().find((item) => item.name === avd);
-  upsertStoredDevice(
+  store.upsertStoredDevice(
     DEMO_PLATFORM.android,
     avd,
     false,
@@ -217,7 +214,7 @@ function markAppleStopped(udid: string): void {
   const display = device ? appleDeviceLabel(device.name, device.runtime) : udid;
   const platform = runtime?.os === "watchos" ? DEMO_PLATFORM.watchos : DEMO_PLATFORM.ios;
   if (display) {
-    upsertStoredDevice(platform, display, false);
+    store.upsertStoredDevice(platform, display, false);
   }
   hooks.onDeviceStop?.(udid);
 }
@@ -244,7 +241,7 @@ function simctlListJson(): string {
     return JSON.stringify({ devices: {} });
   }
   const stored = new Map(
-    [...listStoredDevices(DEMO_PLATFORM.ios), ...listStoredDevices(DEMO_PLATFORM.watchos)].map(
+    [...store.listStoredDevices(DEMO_PLATFORM.ios), ...store.listStoredDevices(DEMO_PLATFORM.watchos)].map(
       (row) => [row.name, row.IsRunning],
     ),
   );
@@ -271,7 +268,7 @@ function mockExecError(message: string): ExecOutputError {
   return error;
 }
 
-export function mockExecFile(bin: string, args: string[] = []): string {
+function mockExecFile(bin: string, args: string[] = []): string {
   const tool = toolBase(bin);
 
   if (tool === "adb") {
@@ -317,7 +314,7 @@ export function mockExecFile(bin: string, args: string[] = []): string {
     }
     const pkg = args.find((arg) => arg.startsWith("system-images;"));
     if (pkg) {
-      addStoredSdk(DEMO_PLATFORM.android, pkg);
+      store.addStoredSdk(DEMO_PLATFORM.android, pkg);
       return "";
     }
     return sdkmanagerListOutput();
@@ -338,7 +335,7 @@ export function mockExecFile(bin: string, args: string[] = []): string {
       const sysdir = parsed?.sysdir ?? inferSysdir(name);
       const deviceName = deviceId ?? inferDeviceName(name);
       writeAvdFiles(name, deviceName, sysdir);
-      upsertStoredDevice(DEMO_PLATFORM.android, name, false, { deviceName, sysdir });
+      store.upsertStoredDevice(DEMO_PLATFORM.android, name, false, { deviceName, sysdir });
       return "";
     }
     return "";
@@ -356,7 +353,7 @@ export function mockExecFile(bin: string, args: string[] = []): string {
       const display = device ? appleDeviceLabel(device.name, device.runtime) : udid;
       const platform = runtime?.os === "watchos" ? DEMO_PLATFORM.watchos : DEMO_PLATFORM.ios;
       if (display) {
-        upsertStoredDevice(platform, display, true);
+        store.upsertStoredDevice(platform, display, true);
       }
       hooks.onDeviceStart?.(
         runtime?.os === "watchos" ? "wear" : "ios",
@@ -397,7 +394,7 @@ class FakeChild extends EventEmitter {
   }
 }
 
-export function mockSpawn(
+function mockSpawn(
   bin: string,
   args: string[] = [],
 ): FakeChild {
@@ -405,7 +402,7 @@ export function mockSpawn(
   if (tool === "emulator") {
     const avd = flagValue(args, "-avd");
     if (avd) {
-      upsertStoredDevice(DEMO_PLATFORM.android, avd, true);
+      store.upsertStoredDevice(DEMO_PLATFORM.android, avd, true);
       hooks.onDeviceStart?.(
         deviceKind(avd, androidDevices().find((device) => device.name === avd)),
         avd,
@@ -417,7 +414,7 @@ export function mockSpawn(
   if (tool === "sdkmanager") {
     const pkg = args.find((arg) => arg.startsWith("system-images;"));
     if (pkg) {
-      addStoredSdk(DEMO_PLATFORM.android, pkg);
+      store.addStoredSdk(DEMO_PLATFORM.android, pkg);
     }
     return new FakeChild(DEMO_PIDS.android);
   }
@@ -516,24 +513,7 @@ function childrenOf(dir: string): string[] {
   return [...names].sort();
 }
 
-export function isMockFsPath(filePath: string): boolean {
-  const resolved = path.resolve(filePath);
-  return (
-    resolved === MOCK_SDK_ROOT ||
-    resolved.startsWith(`${MOCK_SDK_ROOT}${path.sep}`) ||
-    resolved === MOCK_AVD_HOME ||
-    resolved.startsWith(`${MOCK_AVD_HOME}${path.sep}`) ||
-    resolved === MOCK_AVDMANAGER ||
-    resolved === MOCK_EMULATOR ||
-    resolved === MOCK_SDKMANAGER
-  );
-}
-
-export function isMockLogPath(filePath: string): boolean {
-  return path.resolve(filePath) === path.resolve(EMULATOR_LOG);
-}
-
-export function mockExistsSync(filePath: string): boolean {
+function mockExistsSync(filePath: string): boolean {
   const resolved = path.resolve(filePath);
   if (imageDirs().includes(resolved)) {
     return true;
@@ -549,11 +529,11 @@ export function mockExistsSync(filePath: string): boolean {
   );
 }
 
-export function mockReaddirSync(filePath: string): string[] {
+function mockReaddirSync(filePath: string): string[] {
   return childrenOf(path.resolve(filePath));
 }
 
-export function mockStatSync(filePath: string): { isDirectory(): boolean } {
+function mockStatSync(filePath: string): { isDirectory(): boolean } {
   const resolved = path.resolve(filePath);
   const directory = imageDirs().includes(resolved);
   return {
@@ -561,7 +541,7 @@ export function mockStatSync(filePath: string): { isDirectory(): boolean } {
   };
 }
 
-export function mockReadFileSync(filePath: string): string {
+function mockReadFileSync(filePath: string): string {
   const contents = generatedFiles().get(path.resolve(filePath));
   if (contents === undefined) {
     throw new Error(`ENOENT: ${filePath}`);
@@ -569,6 +549,34 @@ export function mockReadFileSync(filePath: string): string {
   return contents;
 }
 
-export function mockWriteFileSync(filePath: string, contents: string): void {
+function mockWriteFileSync(filePath: string, contents: string): void {
   fileWrites.set(path.resolve(filePath), contents);
+}
+
+  return {
+    mockExecFile,
+    mockSpawn,
+    mockExistsSync,
+    mockReaddirSync,
+    mockStatSync,
+    mockReadFileSync,
+    mockWriteFileSync,
+  };
+}
+
+export function isMockFsPath(filePath: string): boolean {
+  const resolved = path.resolve(filePath);
+  return (
+    resolved === MOCK_SDK_ROOT ||
+    resolved.startsWith(`${MOCK_SDK_ROOT}${path.sep}`) ||
+    resolved === MOCK_AVD_HOME ||
+    resolved.startsWith(`${MOCK_AVD_HOME}${path.sep}`) ||
+    resolved === MOCK_AVDMANAGER ||
+    resolved === MOCK_EMULATOR ||
+    resolved === MOCK_SDKMANAGER
+  );
+}
+
+export function isMockLogPath(filePath: string): boolean {
+  return path.resolve(filePath) === path.resolve(EMULATOR_LOG);
 }

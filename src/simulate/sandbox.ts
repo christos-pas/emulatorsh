@@ -11,18 +11,11 @@ import {
   MOCK_SDK_ROOT,
   MOCK_SDKMANAGER,
 } from "./paths";
-import { clearDemoDb, configureDemoDbPath, demoDbPath, openDemoDb } from "./store";
+import { clearSandboxStorage, createSandboxStore, demoDbPath, type SandboxStore } from "./store";
 import {
-  configureSandboxTools,
+  createSandboxTools,
   isMockFsPath,
   isMockLogPath,
-  mockExecFile,
-  mockExistsSync,
-  mockReadFileSync,
-  mockReaddirSync,
-  mockSpawn,
-  mockStatSync,
-  mockWriteFileSync,
   type SandboxDeviceKind,
   type SandboxHooks,
 } from "./tools";
@@ -35,38 +28,39 @@ export interface SandboxSystemOptions extends SandboxHooks {
 
 export interface SandboxSystem extends System {
   readonly kind: "sandbox";
+  readonly store: SandboxStore;
   clear(): { path: string; removed: boolean };
 }
 
-function createSandboxFs(): SystemFs {
+function createSandboxFs(tools: ReturnType<typeof createSandboxTools>): SystemFs {
   return {
     existsSync(filePath) {
       if (isMockFsPath(filePath)) {
-        return mockExistsSync(filePath);
+        return tools.mockExistsSync(filePath);
       }
       return fs.existsSync(filePath);
     },
     readdirSync(filePath) {
       if (isMockFsPath(filePath)) {
-        return mockReaddirSync(filePath);
+        return tools.mockReaddirSync(filePath);
       }
       return fs.readdirSync(filePath);
     },
     statSync(filePath) {
       if (isMockFsPath(filePath)) {
-        return mockStatSync(filePath);
+        return tools.mockStatSync(filePath);
       }
       return fs.statSync(filePath);
     },
     readFileSync(filePath, encoding = "utf8") {
       if (isMockFsPath(filePath)) {
-        return mockReadFileSync(filePath);
+        return tools.mockReadFileSync(filePath);
       }
       return fs.readFileSync(filePath, encoding);
     },
     writeFileSync(filePath, contents) {
       if (isMockFsPath(filePath)) {
-        mockWriteFileSync(filePath, contents);
+        tools.mockWriteFileSync(filePath, contents);
         return;
       }
       fs.writeFileSync(filePath, contents);
@@ -90,29 +84,30 @@ function createSandboxFs(): SystemFs {
 }
 
 export function createSandboxSystem(options: SandboxSystemOptions): SandboxSystem {
-  configureSandboxTools({
+  const store = createSandboxStore(options.storage);
+  const tools = createSandboxTools({
     os: options.os,
+    store,
     onDeviceStart: options.onDeviceStart,
     onDeviceStop: options.onDeviceStop,
   });
-  configureDemoDbPath(options.storage);
-  openDemoDb();
 
   return {
     kind: "sandbox",
     os: options.os,
+    store,
     env: {
       get(name) {
         return process.env[name];
       },
     },
     exec(bin, args = []) {
-      return mockExecFile(bin, args);
+      return tools.mockExecFile(bin, args);
     },
     spawn(bin, args = [], _options?: SpawnOptions) {
-      return mockSpawn(bin, args) as unknown as ReturnType<System["spawn"]>;
+      return tools.mockSpawn(bin, args) as unknown as ReturnType<System["spawn"]>;
     },
-    fs: createSandboxFs(),
+    fs: createSandboxFs(tools),
     paths: {
       homeDir: () => os.homedir(),
       sdkRoot: () => MOCK_SDK_ROOT,
@@ -126,14 +121,10 @@ export function createSandboxSystem(options: SandboxSystemOptions): SandboxSyste
       demoProfiles().map((profile) => [profile.value, profile.supportedSdks]),
     ),
     clear() {
-      return clearDemoDb();
+      return store.clear();
     },
   };
 }
 
-export function clearSandboxStorage(storage = demoDbPath()): { path: string; removed: boolean } {
-  configureDemoDbPath(storage);
-  return clearDemoDb();
-}
-
+export { clearSandboxStorage, demoDbPath };
 export type { SandboxDeviceKind };
