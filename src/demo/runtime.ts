@@ -1,9 +1,10 @@
 import { proposedAvdName, sanitizeAvdName } from "../sdk/android/format";
 import { formFactorOf } from "../sdk/android/images";
 import { profileSupportsImage, sysdirMatchesImage } from "../sdk/android/specs";
-import { isAppleDeviceId } from "../sdk/apple/id";
-import { BACK } from "../sdk/constants";
-import type { FormFactor, MenuItem } from "../sdk/types";
+import { helpers } from "../sdk";
+import { BACK } from "../cli/constants";
+import type { MenuItem } from "../cli/types";
+import type { FormFactor } from "../sdk/types";
 import { DEMO, DEMO_PIDS, createDemoCatalog, type DemoCatalog } from "../simulate/data";
 import { menuHeading, runningSummary, type Runtime } from "../cli/runtime";
 import { imageToItem, platformToItem } from "../cli/items";
@@ -200,7 +201,7 @@ export function createDemoRuntime(options: {
       return DEMO_PIDS.ios;
     },
     async suspendDevice(device) {
-      if (!isAppleDeviceId(device.value)) {
+      if (!helpers.isAppleDeviceId(device.value)) {
         pushOutput([{ text: suspendHeading(device.name), fill: "#4ea8ff" }], 0.35);
         pushOutput([{ text: suspendProgressBar(100), fill: "#4ea8ff" }], 0.55);
       }

@@ -1,10 +1,9 @@
 import { createEmulatorsh } from "../sdk";
-import { createNewDeviceOption } from "../sdk/android/avds";
-import { isAppleDeviceId } from "../sdk/apple/id";
-import { BACK, BLUE, ORANGE, PAGE_SIZE, RESET, SIMULATE_BANNER } from "../sdk/constants";
-import type { DeviceProfile, FormFactor, MenuItem, SystemImage } from "../sdk/types";
+import { BACK, BLUE, ORANGE, PAGE_SIZE, RESET, SIMULATE_BANNER } from "./constants";
+import type { DeviceProfile, FormFactor, SystemImage } from "../sdk/types";
+import type { MenuItem } from "./types";
 import type { System } from "../system/types";
-import { androidToItem, appleToItem, imageToItem, platformToItem, profileToItem } from "./items";
+import { androidToItem, appleToItem, createNewDeviceOption, imageToItem, platformToItem, profileToItem } from "./items";
 import type { CloseRequest } from "./close";
 import { playSimulateSdkInstall } from "./ui/install-progress";
 import { prompt, useTwoColumns, type PromptOptions, type ScriptedKey } from "./ui/prompt";
@@ -97,13 +96,13 @@ export function createLiveRuntime(system: System, promptOptions: PromptOptions =
     startIos: (device) => emulatorsh.ios.start({ id: device.value }),
     async suspendDevice(device) {
       const suspend = () => {
-        if (isAppleDeviceId(device.value)) {
+        if (emulatorsh.helpers.isAppleDeviceId(device.value)) {
           emulatorsh.ios.suspend({ id: device.value });
           return;
         }
         emulatorsh.android.suspend(device.value);
       };
-      if (isAppleDeviceId(device.value)) {
+      if (emulatorsh.helpers.isAppleDeviceId(device.value)) {
         suspend();
         return;
       }

@@ -1,5 +1,5 @@
-import { GRAY, GREEN, PAGE_SIZE, PURPLE, RESET, TEAL } from "../../sdk/constants";
-import type { Direction, Layout, MenuItem } from "../../sdk/types";
+import { GRAY, GREEN, PAGE_SIZE, PURPLE, RESET, TEAL } from "../constants";
+import type { Direction, Layout, MenuItem } from "../types";
 import { canCloseItem, closeRequest, type CloseRequest } from "../close";
 
 export function hideCursor(): void {

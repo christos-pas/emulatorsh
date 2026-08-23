@@ -1,7 +1,6 @@
 import path from "node:path";
 
-import { CREATE_VALUE } from "../constants";
-import type { AndroidDevice, DeviceProfile, ExistingAvd, ExecOutputError, MenuItem, SystemImage } from "../types";
+import type { AndroidDevice, DeviceProfile, ExistingAvd, ExecOutputError, SystemImage } from "../types";
 import { runFile } from "../../system/exec";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "../../system/fs";
 import type { System } from "../../system/types";
@@ -56,15 +55,6 @@ export function androidSerialForAvd(system: System, avdName: string): string | n
 
 export function runningAndroidAvdNames(system: System): Set<string> {
   return new Set(androidEmulatorSerials(system).map((device) => device.name));
-}
-
-export function createNewDeviceOption(): MenuItem {
-  return {
-    name: "Create new device",
-    value: CREATE_VALUE,
-    create: true,
-    accent: "purple",
-  };
 }
 
 export function listAndroidAvds(system: System): AndroidDevice[] {

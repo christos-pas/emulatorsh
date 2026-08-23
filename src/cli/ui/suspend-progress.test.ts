@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { BLUE, RESET } from "../../sdk/constants";
+import { BLUE, RESET } from "../constants";
 import {
   playSuspendProgress,
   SUSPEND_BAR_WIDTH,

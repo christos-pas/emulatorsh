@@ -1,19 +1,31 @@
-import { appleDisplayName } from "../sdk/resolve";
-import type {
-  AndroidDevice,
-  AppleDevice,
-  DeviceProfile,
-  MenuItem,
-  Platform,
-  PlatformName,
-  SystemImage,
-} from "../sdk/types";
+import { helpers } from "../sdk";
+import { CREATE_VALUE, INSTALL_SDK_VALUE } from "./constants";
+import type { AndroidDevice, AppleDevice, DeviceProfile, Platform, PlatformName, SystemImage } from "../sdk/types";
+import type { MenuItem } from "./types";
 
 const PLATFORM_LABEL: Record<PlatformName, string> = {
   android: "Android",
   ios: "iOS",
   watchos: "watchOS",
 };
+
+export function installSdkOption(): MenuItem {
+  return {
+    name: "Install new SDK",
+    value: INSTALL_SDK_VALUE,
+    installSdk: true,
+    accent: "purple",
+  };
+}
+
+export function createNewDeviceOption(): MenuItem {
+  return {
+    name: "Create new device",
+    value: CREATE_VALUE,
+    create: true,
+    accent: "purple",
+  };
+}
 
 export function platformToItem(platform: Platform): MenuItem {
   return {
@@ -33,7 +45,7 @@ export function androidToItem(device: AndroidDevice): MenuItem {
 
 export function appleToItem(device: AppleDevice): MenuItem {
   return {
-    name: appleDisplayName(device),
+    name: helpers.appleDisplayName(device),
     value: device.id,
     running: device.running,
   };

@@ -1,6 +1,6 @@
 import { layoutForSelection } from "../cli/ui/prompt";
-import { BLUE, GRAY, GREEN, ORANGE, PURPLE, RESET, TEAL } from "../sdk/constants";
-import type { MenuItem } from "../sdk/types";
+import { BLUE, GRAY, GREEN, ORANGE, PURPLE, RESET, TEAL } from "../cli/constants";
+import type { MenuItem } from "../cli/types";
 import type { DemoFrame } from "./runtime";
 
 const BG = "#1e1e2e";

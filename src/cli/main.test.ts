@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { BACK, CLOSE_SUSPEND, CLOSE_TERMINATE, ORANGE, RESET, SIMULATE_NOTE } from "../sdk/constants";
-import type { MenuItem } from "../sdk/types";
+import { BACK, CLOSE_SUSPEND, CLOSE_TERMINATE, ORANGE, RESET, SIMULATE_NOTE } from "./constants";
+import type { MenuItem } from "./types";
 import { closeRequest } from "./close";
 import { closedMessage, main, startedMessage } from "./main";
 import type { Runtime } from "./runtime";

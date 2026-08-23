@@ -1,4 +1,4 @@
-import { ORANGE, RESET, SIMULATE_INSTALL_NOTE } from "../../sdk/constants";
+import { ORANGE, RESET, SIMULATE_INSTALL_NOTE } from "../constants";
 
 const BAR_WIDTH = 38;
 const TOTAL_MB = 362;

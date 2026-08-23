@@ -8,6 +8,7 @@ import {
 import { listDeviceProfiles } from "./android/profiles";
 import { listIosSimulators, listWatchSimulators } from "./apple/simulators";
 import { EmulatorshError } from "./errors";
+import { helpers } from "./helpers";
 import { listPlatforms } from "./platforms";
 import { suspendAndroid, suspendApple, terminateAndroid } from "./power";
 import {
@@ -36,6 +37,10 @@ export interface EmulatorshOptions {
 }
 
 export interface Emulatorsh {
+  helpers: {
+    isAppleDeviceId(value: string): boolean;
+    appleDisplayName(device: Pick<AppleDevice, "name" | "runtime">): string;
+  };
   platforms: {
     list(): Platform[];
   };
@@ -76,6 +81,7 @@ export interface Emulatorsh {
 export function createEmulatorsh(options: EmulatorshOptions): Emulatorsh {
   const { system } = options;
   return {
+    helpers,
     platforms: {
       list: () => listPlatforms(system),
     },
@@ -110,7 +116,7 @@ export function createEmulatorsh(options: EmulatorshOptions): Emulatorsh {
   };
 }
 
-export { EmulatorshError };
+export { EmulatorshError, helpers };
 export type {
   AndroidDevice,
   AndroidRef,

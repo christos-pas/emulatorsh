@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { SIMULATE_INSTALL_NOTE } from "../../sdk/constants";
+import { SIMULATE_INSTALL_NOTE } from "../constants";
 import { sdkDownloadLine, sdkProgressBar, withSimulateInstallNote } from "./install-progress";
 
 test("sdk progress bar matches sdkmanager-style width and percent", () => {

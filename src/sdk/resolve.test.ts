@@ -16,6 +16,19 @@ function emu() {
   return { dir, client };
 }
 
+test("helpers distinguish Apple UDIDs and format simulator names", () => {
+  const { dir, client } = emu();
+  try {
+    assert.equal(client.helpers.isAppleDeviceId("06133482-749C-4A5D-9D27-8E082984CB91"), true);
+    assert.equal(client.helpers.isAppleDeviceId("Pixel_9_API_36"), false);
+    const iphone = client.ios.list().find((device) => device.name === "iPhone 17");
+    assert.ok(iphone);
+    assert.equal(client.helpers.appleDisplayName(iphone), `${iphone.name} (${iphone.runtime})`);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("platforms.list returns name, installed count, and running count", () => {
   const { dir, client } = emu();
   try {

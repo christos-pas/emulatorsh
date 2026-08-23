@@ -1,7 +1,7 @@
 import path from "node:path";
 
-import { INSTALL_SDK_VALUE, MAX_AVAILABLE_SDKS, NON_PHONE_IMAGE, WEAR_IMAGE } from "../constants";
-import type { ExecOutputError, FormFactor, MenuItem, SystemImage } from "../types";
+import { MAX_AVAILABLE_SDKS, NON_PHONE_IMAGE, WEAR_IMAGE } from "../constants";
+import type { ExecOutputError, FormFactor, SystemImage } from "../types";
 import { runFile, spawnProcess } from "../../system/exec";
 import { existsSync, readdirSync, statSync } from "../../system/fs";
 import type { System } from "../../system/types";
@@ -32,15 +32,6 @@ export function matchesFormFactor(tag: string, formFactor: FormFactor): boolean 
 export function formFactorOf(image: SystemImage): FormFactor {
   const tag = specFromImage(image)?.tag ?? "";
   return isWearSystemImage(tag) ? "wear" : "phone";
-}
-
-export function installSdkOption(): MenuItem {
-  return {
-    name: "Install new SDK",
-    value: INSTALL_SDK_VALUE,
-    installSdk: true,
-    accent: "purple",
-  };
 }
 
 export function listInstalledSystemImages(system: System, formFactor: FormFactor): SystemImage[] {

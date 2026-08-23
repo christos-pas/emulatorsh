@@ -1,4 +1,4 @@
-import { BLUE, RESET } from "../../sdk/constants";
+import { BLUE, RESET } from "../constants";
 import { sdkProgressBar } from "./install-progress";
 
 export const SUSPEND_BAR_WIDTH = 20;

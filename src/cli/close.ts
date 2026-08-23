@@ -1,6 +1,6 @@
-import { CLOSE_BACK, CLOSE_SUSPEND, CLOSE_TERMINATE } from "../sdk/constants";
-import { isAppleDeviceId } from "../sdk/apple/id";
-import type { MenuItem } from "../sdk/types";
+import { helpers } from "../sdk";
+import { CLOSE_BACK, CLOSE_SUSPEND, CLOSE_TERMINATE } from "./constants";
+import type { MenuItem } from "./types";
 
 export const CLOSE = Symbol("close");
 
@@ -27,7 +27,7 @@ export function closeConfirmationItems(device: MenuItem): MenuItem[] {
     { name: "Back", value: CLOSE_BACK },
     { name: `Suspend ${name}`, value: CLOSE_SUSPEND },
   ];
-  if (!isAppleDeviceId(device.value)) {
+  if (!helpers.isAppleDeviceId(device.value)) {
     items.push({
       name: `Terminate ${name}`,
       value: CLOSE_TERMINATE,
@@ -36,5 +36,3 @@ export function closeConfirmationItems(device: MenuItem): MenuItem[] {
   }
   return items;
 }
-
-export { isAppleDeviceId };

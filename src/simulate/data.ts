@@ -1,4 +1,3 @@
-import { CREATE_VALUE } from "../sdk/constants";
 import { imageDisplayName } from "../sdk/android/format";
 import {
   isWearSpec,
@@ -8,7 +7,9 @@ import {
   type ImageSpec,
 } from "../sdk/android/specs";
 import { appleDeviceLabel } from "../sdk/apple/runtime";
-import type { FormFactor, MenuItem, SystemImage } from "../sdk/types";
+import type { MenuItem } from "../cli/types";
+import type { FormFactor, SystemImage } from "../sdk/types";
+import { createNewDeviceOption } from "../cli/items";
 
 export { DEMO_DB_FILENAME, DEMO_PIDS, DEMO_PLATFORM } from "./constants";
 
@@ -75,15 +76,6 @@ function cloneProfile(profile: DemoProfile): DemoProfile {
     name: profile.name,
     value: profile.value,
     supportedSdks: profile.supportedSdks.map((spec) => ({ ...spec })),
-  };
-}
-
-export function createNewDeviceOption(): MenuItem {
-  return {
-    name: "Create new device",
-    value: CREATE_VALUE,
-    create: true,
-    accent: "purple",
   };
 }
 

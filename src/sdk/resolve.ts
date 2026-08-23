@@ -1,4 +1,4 @@
-import { isAppleDeviceId } from "./apple/id";
+import { appleDisplayName, isAppleDeviceId } from "./helpers";
 import { listAppleSimulators } from "./apple/simulators";
 import type { AppleOs } from "./apple/runtime";
 import { listAndroidAvds } from "./android/avds";
@@ -29,10 +29,6 @@ export function imagePackageOf(ref: ImageRef): string {
     throw new EmulatorshError(ErrorCode.DEVICE_NOT_FOUND, "Missing system image package.");
   }
   return pkg;
-}
-
-export function appleDisplayName(device: Pick<AppleDevice, "name" | "runtime">): string {
-  return device.runtime ? `${device.name} (${device.runtime})` : device.name;
 }
 
 function appleQuery(ref: AppleRef): string {

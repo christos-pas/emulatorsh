@@ -8,8 +8,6 @@ export interface Platform {
   running: number;
 }
 
-export type Direction = "up" | "down" | "left" | "right";
-
 export interface ImageSpec {
   api: string;
   tag: string;
@@ -46,29 +44,6 @@ export type AndroidRef = string | Pick<AndroidDevice, "name">;
 export type AppleRef = string | Pick<AppleDevice, "id"> | Pick<AppleDevice, "name"> | AppleDevice;
 export type ImageRef = string | Pick<SystemImage, "package"> | SystemImage;
 
-export interface MenuItem {
-  name: string;
-  value: string;
-  label?: string;
-  create?: boolean;
-  installSdk?: boolean;
-  accent?: "purple";
-  running?: boolean;
-  installed?: boolean;
-  installedCount?: number;
-  hint?: string;
-  runningSummary?: {
-    running: number;
-    total: number;
-  };
-  avdName?: string;
-  emulatorBin?: string;
-  package?: string;
-  api?: string;
-  sysdir?: string;
-  supportedSdks?: ImageSpec[];
-}
-
 export interface DeviceDefinition {
   id: string;
   name: string;
@@ -79,20 +54,6 @@ export interface ExistingAvd {
   name: string;
   deviceName: string;
   sysdir: string;
-}
-
-export interface Layout {
-  paginate: boolean;
-  page: number;
-  pages: number;
-  start: number;
-  pageItems: MenuItem[];
-  twoCols: boolean;
-  leftCount: number;
-  rightCount: number;
-  rowCount: number;
-  colWidth: number;
-  drawnRows: number;
 }
 
 export interface ExecOutputError extends Error {

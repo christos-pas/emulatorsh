@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { BLUE, CLOSE_BACK, CLOSE_SUSPEND, CLOSE_TERMINATE } from "../sdk/constants";
+import { BLUE, CLOSE_BACK, CLOSE_SUSPEND, CLOSE_TERMINATE } from "./constants";
+import { helpers } from "../sdk";
 import {
   canCloseItem,
   closeConfirmationItems,
   closeRequest,
-  isAppleDeviceId,
   isCloseRequest,
 } from "./close";
 import { menuHeading } from "./runtime";
@@ -55,8 +55,8 @@ test("Apple simulators only offer Suspend", () => {
 });
 
 test("Apple UDIDs are distinguished from AVD names", () => {
-  assert.equal(isAppleDeviceId("06133482-749C-4A5D-9D27-8E082984CB91"), true);
-  assert.equal(isAppleDeviceId("Pixel_9_API_36"), false);
+  assert.equal(helpers.isAppleDeviceId("06133482-749C-4A5D-9D27-8E082984CB91"), true);
+  assert.equal(helpers.isAppleDeviceId("Pixel_9_API_36"), false);
 });
 
 test("close request is a distinct pick result", () => {

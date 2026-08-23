@@ -6,13 +6,12 @@ import { GIFEncoder, applyPalette, quantize } from "gifenc";
 import { Resvg } from "@resvg/resvg-js";
 
 import { closeConfirmationItems } from "../cli/close";
-import { imageToItem } from "../cli/items";
+import { CLOSE_SUSPEND, CREATE_VALUE, INSTALL_SDK_VALUE } from "../cli/constants";
+import { imageToItem, installSdkOption } from "../cli/items";
 import { main } from "../cli/main";
 import { moveSelection, type ScriptedKey } from "../cli/ui/prompt";
-import { installSdkOption } from "../sdk/android/images";
 import { profileSupportsImage } from "../sdk/android/specs";
-import { CLOSE_SUSPEND, CREATE_VALUE, INSTALL_SDK_VALUE } from "../sdk/constants";
-import type { MenuItem } from "../sdk/types";
+import type { MenuItem } from "../cli/types";
 import { createDemoCatalog, type DemoCatalog } from "../simulate/data";
 import { createDemoRuntime, type DemoFrame } from "./runtime";
 import { FONT, frameToSvg, typeCommandFrames } from "./svg";

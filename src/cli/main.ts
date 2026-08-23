@@ -1,20 +1,20 @@
-import { installSdkOption } from "../sdk/android/images";
+import { EMULATOR_LOG } from "../sdk/constants";
+import type { FormFactor, SystemImage } from "../sdk/types";
+import type { MenuItem } from "./types";
+import { closeConfirmationItems, isCloseRequest } from "./close";
 import {
   BACK,
   CLOSED,
   CLOSE_BACK,
   CLOSE_SUSPEND,
   CLOSE_TERMINATE,
-  EMULATOR_LOG,
   NO_EMULATORS,
   NO_SDK,
   ORANGE,
   RESET,
   SIMULATE_NOTE,
-} from "../sdk/constants";
-import type { FormFactor, MenuItem, SystemImage } from "../sdk/types";
-import { closeConfirmationItems, isCloseRequest } from "./close";
-import { imageFromItem } from "./items";
+} from "./constants";
+import { imageFromItem, installSdkOption } from "./items";
 import type { Runtime } from "./runtime";
 
 export function startedMessage(detail: string, simulate = false): string {

@@ -18,6 +18,12 @@ Prefer a named factory? `import { createEmulatorsh, emulatorsh } from "emulators
 
 The CLI is menus on top of this. Every device operation it can do is here.
 
+```ts
+emulatorsh.helpers.isAppleDeviceId("06133482-749C-4A5D-9D27-8E082984CB91");
+emulatorsh.helpers.appleDisplayName({ name: "iPhone 16", runtime: "iOS 18.4" });
+// "iPhone 16 (iOS 18.4)"
+```
+
 ## Platforms
 
 The first CLI screen, without the prompt:
