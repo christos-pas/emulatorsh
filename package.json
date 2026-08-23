@@ -28,11 +28,20 @@
     "cli"
   ],
   "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./system": "./dist/system/index.js",
+    "./simulate": "./dist/simulate/index.js"
+  },
   "bin": {
     "emulatorsh": "./dist/cli.js"
   },
   "files": [
     "dist/cli.js",
+    "dist/index.js",
+    "dist/system/index.js",
+    "dist/simulate/index.js",
     "docs/screens/usage.gif",
     "docs/screens/what-platforms.gif",
     "docs/screens/what-ios.gif",
@@ -53,9 +62,9 @@
     "dev": "tsup --watch",
     "start": "node dist/cli.js",
     "record-gif": "npm run build && node dist/demo/record-gif.js",
-    "refresh-demo-data": "npm run build && node dist/demo/refresh-data.js && npm run build",
+    "refresh-demo-data": "npm run build && node dist/simulate/refresh-data.js && npm run build",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/android/*.test.ts src/demo/*.test.ts src/ios/*.test.ts src/ui/*.test.ts src/devices/*.test.ts src/flows.test.ts",
+    "test": "tsx --test $(find src -name '*.test.ts')",
     "prepublishOnly": "npm run build && npm run typecheck && npm test",
     "release": "node scripts/release.js"
   },

@@ -16,11 +16,11 @@ npm run build       # emit dist/cli.js
 npm start           # node dist/cli.js
 npm run typecheck
 npm test
-npm run refresh-demo-data  # snapshot this machine's SDKs/devices into src/demo/data.ts
+npm run refresh-demo-data  # snapshot this machine's SDKs/devices into src/simulate/data.ts
 npm run record-gif  # real TUI + mock backend → docs/screens/*.gif
 ```
 
-To rebuild `src/demo/data.ts` from the SDKs and devices on this machine (convenience only; not used at runtime):
+To rebuild `src/simulate/data.ts` from the SDKs and devices on this machine (convenience only; not used at runtime):
 
 ```bash
 npm run refresh-demo-data
@@ -29,7 +29,7 @@ npm run refresh-demo-data -- --dry-run   # print counts without writing
 
 That walks `sdkmanager --list` (all downloadable images, not only installed), `avdmanager` device definitions, and iOS / watchOS simulators, then writes the fixture that `--simulate` commits to git. Re-record the GIF afterwards if the menus change: `npm run record-gif`.
 
-`record-gif` and `--simulate` share the fixture in `src/demo/data.ts`. The GIF recorder still drives `main()` with scripted keys and an in-memory catalog (no SQLite). `--simulate` runs the same listing/install/start functions; `adb` / `emulator` / `sdkmanager` / `avdmanager` / `simctl` (and the SDK/AVD filesystem) are mocked and persist into `demo.db`. Rasterization is 2× SVG via `@resvg/resvg-js`, encoded with `gifenc`.
+`record-gif` and `--simulate` share the fixture in `src/simulate/data.ts`. The GIF recorder still drives `main()` with scripted keys and an in-memory catalog (no SQLite). `--simulate` runs the same listing/install/start functions; `adb` / `emulator` / `sdkmanager` / `avdmanager` / `simctl` (and the SDK/AVD filesystem) are mocked and persist into `demo.db`. Rasterization is 2× SVG via `@resvg/resvg-js`, encoded with `gifenc`.
 
 Stack: **TypeScript** + **tsup** (esbuild). Runtime dependency-free; Node built-ins only. GIF tooling is dev-only.
 

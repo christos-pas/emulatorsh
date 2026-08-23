@@ -1,12 +1,12 @@
-import { proposedAvdName, sanitizeAvdName } from "../android/format.js";
-import { profileSupportsImage, sysdirMatchesImage } from "../android/specs.js";
-import { BACK } from "../constants.js";
-import type { FormFactor, MenuItem } from "../types.js";
-import { prompt, type RenderFrame, type ScriptedKey } from "../ui/prompt.js";
-import { isAppleDeviceId } from "../devices/close.js";
-import { suspendHeading, suspendProgressBar } from "../devices/suspend-progress.js";
-import { menuHeading, type Runtime } from "../runtime.js";
-import { DEMO, DEMO_PIDS, createDemoCatalog, type DemoCatalog } from "./data.js";
+import { proposedAvdName, sanitizeAvdName } from "../sdk/android/format";
+import { profileSupportsImage, sysdirMatchesImage } from "../sdk/android/specs";
+import { isAppleDeviceId } from "../sdk/apple/id";
+import { BACK } from "../sdk/constants";
+import type { FormFactor, MenuItem } from "../sdk/types";
+import { DEMO, DEMO_PIDS, createDemoCatalog, type DemoCatalog } from "../simulate/data";
+import { menuHeading, type Runtime } from "../cli/runtime";
+import { prompt, type RenderFrame, type ScriptedKey } from "../cli/ui/prompt";
+import { suspendHeading, suspendProgressBar } from "../cli/ui/suspend-progress";
 
 export type DemoFrame =
   | {

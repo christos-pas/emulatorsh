@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { isWearSpec, specFromSysdir } from "../android/specs.js";
-import { rememberStoredFakeWindow, takeStoredFakeWindows } from "./store.js";
+import { isWearSpec, specFromSysdir } from "../sdk/android/specs";
+import { rememberStoredFakeWindow, takeStoredFakeWindows } from "../simulate/store";
 
 export type FakeKind = "android" | "ios" | "wear";
 

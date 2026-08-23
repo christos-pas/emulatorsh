@@ -1,7 +1,7 @@
-import { BLUE, GRAY, GREEN, ORANGE, PURPLE, RESET, TEAL } from "../constants.js";
-import type { MenuItem } from "../types.js";
-import { layoutForSelection } from "../ui/prompt.js";
-import type { DemoFrame } from "./runtime.js";
+import { layoutForSelection } from "../cli/ui/prompt";
+import { BLUE, GRAY, GREEN, ORANGE, PURPLE, RESET, TEAL } from "../sdk/constants";
+import type { MenuItem } from "../sdk/types";
+import type { DemoFrame } from "./runtime";
 
 const BG = "#1e1e2e";
 const BAR = "#11111b";

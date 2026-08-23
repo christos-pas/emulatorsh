@@ -16,7 +16,7 @@ import {
   writeMacWindowScript,
   writeWindowsWindowScript,
   type FakeKind,
-} from "./fake-window.js";
+} from "./fake-window";
 
 const dirs: string[] = [];
 

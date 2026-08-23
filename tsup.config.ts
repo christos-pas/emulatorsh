@@ -1,7 +1,14 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/cli.ts", "src/demo/record-gif.ts", "src/demo/refresh-data.ts"],
+  entry: {
+    cli: "src/cli/index.ts",
+    index: "src/index.ts",
+    "system/index": "src/system/index.ts",
+    "simulate/index": "src/simulate/index.ts",
+    "demo/record-gif": "src/demo/record-gif.ts",
+    "simulate/refresh-data": "src/simulate/refresh-data.ts",
+  },
   format: ["esm"],
   target: "node18",
   outDir: "dist",

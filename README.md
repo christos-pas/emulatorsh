@@ -44,6 +44,29 @@ No runtime npm dependencies. It shells out to the SDK and Xcode on your machine.
 
    <img src="./docs/screens/what-close.gif" width="420" alt="Suspend a running watchOS simulator, then a running Android AVD" />
 
+### You like it headless? Not an issue! Explore the emulatorsh SDK and use it directly inside your project
+
+Same tricks, no keyboard. Drop `emulatorsh` into a Node project and drive Android, iOS, and watchOS from TypeScript or JavaScript — list, launch, create, install, suspend, terminate. Starts **detached**, same as the CLI. Needs the same Android SDK / Xcode setup as [Environment](#environment) below.
+
+```bash
+npm install emulatorsh
+```
+
+The default import talks to **your machine**:
+
+```ts
+import emulatorsh from "emulatorsh";
+
+const pixel = emulatorsh.android.list().find((device) => device.value === "Pixel_9_API_36");
+if (pixel && !pixel.running) {
+  emulatorsh.android.start(pixel);
+}
+```
+
+`device.value` is the AVD name on Android, and the simulator UDID on iOS / watchOS. `device.running` is the green `[running]` you already know from the menus.
+
+[Learn more in the SDK guide](./docs/sdk.md) — launch, create, install, and a sandbox for tests.
+
 ### Create a new Android device
 
 1. Form factor: **Mobile Phone** or **Wear**.

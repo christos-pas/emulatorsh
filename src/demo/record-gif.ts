@@ -5,16 +5,16 @@ import { fileURLToPath } from "node:url";
 import { GIFEncoder, applyPalette, quantize } from "gifenc";
 import { Resvg } from "@resvg/resvg-js";
 
-import { CLOSE_SUSPEND, CREATE_VALUE, INSTALL_SDK_VALUE } from "../constants.js";
-import { closeConfirmationItems } from "../devices/close.js";
-import { installSdkOption } from "../android/images.js";
-import { profileSupportsImage } from "../android/specs.js";
-import { main } from "../flows.js";
-import { createDemoCatalog, type DemoCatalog } from "./data.js";
-import { createDemoRuntime, type DemoFrame } from "./runtime.js";
-import { FONT, frameToSvg, typeCommandFrames } from "./svg.js";
-import { moveSelection, type ScriptedKey } from "../ui/prompt.js";
-import type { MenuItem } from "../types.js";
+import { closeConfirmationItems } from "../cli/close";
+import { main } from "../cli/main";
+import { moveSelection, type ScriptedKey } from "../cli/ui/prompt";
+import { installSdkOption } from "../sdk/android/images";
+import { profileSupportsImage } from "../sdk/android/specs";
+import { CLOSE_SUSPEND, CREATE_VALUE, INSTALL_SDK_VALUE } from "../sdk/constants";
+import type { MenuItem } from "../sdk/types";
+import { createDemoCatalog, type DemoCatalog } from "../simulate/data";
+import { createDemoRuntime, type DemoFrame } from "./runtime";
+import { FONT, frameToSvg, typeCommandFrames } from "./svg";
 
 const DELAY_SCALE = 1.3;
 const WIDTH = 760;
