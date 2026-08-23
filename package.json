@@ -1,6 +1,6 @@
 {
   "name": "emulatorsh",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Launching Android emulators and iOS simulators from the shell, for humans.",
   "license": "MIT",
   "author": {
