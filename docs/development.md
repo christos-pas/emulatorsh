@@ -17,7 +17,7 @@ npm start           # node dist/cli.js
 npm run typecheck
 npm test
 npm run refresh-demo-data  # snapshot this machine's SDKs/devices into src/demo/data.ts
-npm run record-gif  # real TUI + mock backend → docs/screens/usage.gif
+npm run record-gif  # real TUI + mock backend → docs/screens/*.gif
 ```
 
 To rebuild `src/demo/data.ts` from the SDKs and devices on this machine (convenience only; not used at runtime):

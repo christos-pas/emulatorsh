@@ -234,7 +234,7 @@ export function moveSelection(items: MenuItem[], selected: number, direction: Di
   return selected;
 }
 
-export type ScriptedKey = Direction | "enter" | "back" | "quit" | "close";
+export type ScriptedKey = Direction | "enter" | "back" | "quit" | "close" | "hold";
 
 export interface RenderFrame {
   selected: number;
@@ -289,10 +289,15 @@ function promptScripted(
     };
 
     const restAfter = (i: number) => keys.slice(i + 1);
-    emit(0, keys.length === 1 && keys[0] === "enter");
+    emit(0, keys.length === 1 && (keys[0] === "enter" || keys[0] === "hold"));
 
     for (let i = 0; i < keys.length; i += 1) {
       const key = keys[i];
+      if (key === "hold") {
+        emit(i + 1, true);
+        reject(new Error("hold"));
+        return;
+      }
       if (key === "enter") {
         const chosen = items[selected];
         if (!chosen) {

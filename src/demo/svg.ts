@@ -1,4 +1,4 @@
-import { GRAY, GREEN, ORANGE, PURPLE, RESET, TEAL } from "../constants.js";
+import { BLUE, GRAY, GREEN, ORANGE, PURPLE, RESET, TEAL } from "../constants.js";
 import type { MenuItem } from "../types.js";
 import { layoutForSelection } from "../ui/prompt.js";
 import type { DemoFrame } from "./runtime.js";
@@ -18,6 +18,7 @@ const TEXT_X = 24;
 const ANSI_COLORS: Record<string, string> = {
   [GREEN]: "#a6e3a1",
   [TEAL]: TEAL_HEX,
+  [BLUE]: "#4ea8ff",
   [PURPLE]: "#cba6f7",
   [ORANGE]: "#ff8700",
   [GRAY]: DIM,
@@ -54,9 +55,9 @@ function chrome(windowTitle: string, body: string): string {
 </svg>`;
 }
 
-function parseAnsi(line: string): { text: string; fill: string }[] {
+function parseAnsi(line: string, startFill = TEXT): { text: string; fill: string }[] {
   const parts: { text: string; fill: string }[] = [];
-  let fill = TEXT;
+  let fill = startFill;
   const re = /\x1b\[[0-9;]*m/g;
   let last = 0;
   let match: RegExpExecArray | null;
@@ -78,8 +79,8 @@ function parseAnsi(line: string): { text: string; fill: string }[] {
   return parts.filter((part) => part.text.length > 0);
 }
 
-function coloredLine(x: number, y: number, line: string): string {
-  const spans = parseAnsi(line);
+function coloredLine(x: number, y: number, line: string, startFill = TEXT): string {
+  const spans = parseAnsi(line, startFill);
   let cursor = x;
   return spans
     .map((span) => {
@@ -122,7 +123,7 @@ export function frameToSvg(frame: DemoFrame): string {
   }
 
   const parts = [
-    text(TEXT_X, 64, MUTED, frame.heading),
+    coloredLine(TEXT_X, 64, frame.heading, MUTED),
     highlightFor(frame.items, frame.selected),
     ...frame.lines.map((line, index) => coloredLine(TEXT_X, 92 + index * 24, line)),
   ];

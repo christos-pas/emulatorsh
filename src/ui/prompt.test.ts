@@ -55,6 +55,20 @@ test("scripted c closes a running device", async () => {
   }
 });
 
+test("scripted hold stops on the current menu without choosing", async () => {
+  await assert.rejects(
+    () =>
+      prompt(
+        [
+          { name: "Android", value: "android", runningSummary: { running: 1, total: 3 } },
+          { name: "iOS", value: "ios", runningSummary: { running: 0, total: 2 } },
+        ],
+        { keys: ["hold"] },
+      ),
+    /hold/,
+  );
+});
+
 test("scripted c is ignored unless the selected device is running", async () => {
   await assert.rejects(
     () =>

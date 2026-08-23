@@ -29,9 +29,20 @@ No runtime npm dependencies. It shells out to the SDK and Xcode on your machine.
 ## What it does
 
 1. Asks **Android**, **iOS**, or **watchOS**, each with `[running: n/total]` (green if any are up, gray if none).
+
+   <img src="./docs/screens/what-platforms.gif" width="420" alt="Platform list with running counts" />
+
 2. **iOS** / **watchOS** — lists available simulators from `xcrun simctl` for that runtime. Booted devices are marked green `[running]`. Selecting one boots it and opens the Simulator app.
+
+   <img src="./docs/screens/what-ios.gif" width="420" alt="iOS simulator list with two running devices" />
+
 3. **Android** — lists AVDs from `emulator -list-avds`. Running AVDs are marked green `[running]`. Selecting one starts it detached. The last row is purple **Create new device**.
+
+   <img src="./docs/screens/what-android.gif" width="420" alt="Android AVD list with one running device" />
+
 4. On a device list, **`c`** closes the highlighted running device: **Back** returns to the list; **Suspend** or **Terminate** runs the command and exits. Android **Suspend** is a graceful `adb emu kill` so Quick Boot can save a snapshot (next start is not a cold boot). **Terminate** force-kills the emulator and deletes that AVD’s Quick Boot snapshots so the next start is a cold boot — installed apps and userdata stay; it is not a wipe. iOS and watchOS only offer **Suspend** (`simctl shutdown` — it keeps the simulator disk, like a soft shutdown). In `--simulate`, that updates `demo.db` and closes the fake window if it is still open.
+
+   <img src="./docs/screens/what-close.gif" width="420" alt="Suspend a running watchOS simulator, then a running Android AVD" />
 
 ### Create a new Android device
 
@@ -146,9 +157,9 @@ You made too much mess in your playground? Nuke it and start over ;)
 emulatorsh --simulate-clear
 ```
 
-`--simulate` uses the same listing/install/start code as a real run. Without `--simulate`, emulatorsh keeps **no local database or cache**: every list comes from `adb` / `emulator` / `sdkmanager` / `avdmanager` / `simctl` (and the SDK/AVD files those tools already own). The only writes are `hw.keyboard=yes` on a newly created AVD and emulator logs at `/tmp/emulator.log`.
+`--simulate` looks exactly like a real run. In `--simulate`, emulatorsh makes no calls to `adb` / `emulator` / `sdkmanager` / `avdmanager` / `simctl` (and the SDK/AVD files those tools already own). 
 
-With `--simulate`, those CLIs are mocked and persist into gitignored `./demo.db`. The fixture in `src/demo/data.ts` is a snapshot of this machine. Device profiles that do not support the selected SDK are hidden. `--simulate` needs **Node.js 22.5+** (`node:sqlite`). The live command still runs on Node 18.
+With `--simulate`, those CLIs are mocked and persist into a virtual playground state. It is juat a sandbox demo machine with fake emulators, nothing you do there is about to impact an actual system. `--simulate` needs **Node.js 22.5+** (`node:sqlite`). The live command still runs on Node 18.
 
 Want to send a fix or a feature? See [Contributing](CONTRIBUTING.md). Hacking or cutting a release? See [Development](docs/development.md).
 

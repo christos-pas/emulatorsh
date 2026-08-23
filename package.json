@@ -34,6 +34,10 @@
   "files": [
     "dist/cli.js",
     "docs/screens/usage.gif",
+    "docs/screens/what-platforms.gif",
+    "docs/screens/what-ios.gif",
+    "docs/screens/what-android.gif",
+    "docs/screens/what-close.gif",
     "LICENSE",
     "README.md"
   ],
