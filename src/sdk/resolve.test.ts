@@ -171,6 +171,58 @@ test("android.create accepts a profile name and an SDK name", async () => {
   }
 });
 
+test("android.create keeps phone and wear images on their own devices", async () => {
+  const { dir, client } = emu();
+  try {
+    const wear = await client.android.create("36", "wearos_large_round");
+    assert.match(wear.name, /Wear_OS_Large_Round_API_36/);
+
+    const wear33 = await client.android.create("33", "wearos_large_round");
+    assert.match(wear33.name, /Wear_OS_Large_Round_API_33/);
+
+    await assert.rejects(
+      () => client.android.create("33", "Pixel_9"),
+      (error: unknown) => error instanceof EmulatorshError && error.code === ErrorCode.DEVICE_NOT_FOUND,
+    );
+
+    const phone = client.android.images.listInstalled("phone").find((image) => image.api === "36");
+    const wearImage = client.android.images.listInstalled("wear").find((image) => image.api === "36");
+    const pixel = client.android.profiles.list(phone!).find((item) => item.id === "pixel_9");
+    const watch = client.android.profiles.list(wearImage!).find((item) => item.id === "wearos_large_round");
+    assert.ok(phone && wearImage && pixel && watch);
+
+    await assert.rejects(
+      () => client.android.create(phone, watch),
+      (error: unknown) => error instanceof EmulatorshError && error.code === ErrorCode.PROFILE_NOT_FOUND,
+    );
+    await assert.rejects(
+      () => client.android.create(wearImage, pixel),
+      (error: unknown) => error instanceof EmulatorshError && error.code === ErrorCode.PROFILE_NOT_FOUND,
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("android.create does not use an installed SDK the device cannot run", async () => {
+  const { dir, client } = emu();
+  try {
+    await assert.rejects(
+      () => client.android.create("36", "pixel_4a"),
+      (error: unknown) => error instanceof EmulatorshError && error.code === ErrorCode.SDK_NOT_INSTALLED,
+    );
+    const created = await client.android.create("36", "pixel_4a", { installDeps: true });
+    assert.match(created.name, /Pixel_4a_API_36/);
+    assert.ok(
+      client.android.images
+        .listInstalled("phone")
+        .some((image) => image.api === "36" && /;google_apis;/.test(image.package)),
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("android.create can install a missing SDK when installDeps is set", async () => {
   const { dir, client } = emu();
   try {

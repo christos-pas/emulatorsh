@@ -95,7 +95,7 @@ const created = await emulatorsh.android.create("36", "Pixel_9");
 emulatorsh.android.start(created);
 ```
 
-`"Pixel_9"` / `"Pixel 9"` / `"pixel_9"` all work. The SDK can be an API (`"36"`, `"API 36"`), a display name (`API 36 — google_apis_playstore (arm64-v8a)`), or a `system-images;...` package. If several images share that API, playstore wins.
+`"Pixel_9"` / `"Pixel 9"` / `"pixel_9"` all work. The SDK can be an API (`"36"`, `"API 36"`), a display name (`API 36 — google_apis_playstore (arm64-v8a)`), or a `system-images;...` package. Lookup stays in that profile's form factor — a phone never gets Wear, and Wear never gets a phone image. An installed SDK is used only when that device supports it; otherwise create looks at a compatible available image (or throws). If several compatible images share that API, Play Store for this CPU wins.
 
 Not installed yet? Download it first:
 
