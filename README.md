@@ -6,8 +6,6 @@ Interactive terminal UI to **list, create, and launch** Android Virtual Devices 
 
 Pick a platform, pick a device, and boom! You have your emulator up and running. The Emulator process starts **detached** so you can safely close the terminal if you wish. You're missing an Android SDK? No problem, you can do it right from the console! On Android you can also install system images and create new AVDs without opening Android Studio. There's no typing, no need to copy or remember PIDs or device names, the console is interactive. You simply navigate with your keyboard. Yup... I know, I'm excited too!
 
-Teal `>` is the cursor. Green is **running** or **already installed**. On the platform list, `[running: 1/3]` is green when any device is up and gray when the count is `0`. Purple is a create/install action. Long lists split into **two columns** and paginate (`1/2 ↓ more`).
-
 Licensed under [MIT](./LICENSE).
 
 ## But why, Chris?
@@ -40,7 +38,7 @@ No runtime npm dependencies. It shells out to the SDK and Xcode on your machine.
 
    <img src="./docs/screens/what-android.gif" width="420" alt="Android AVD list with one running device" />
 
-4. On a device list, **`c`** closes the highlighted running device: **Back** returns to the list; **Suspend** or **Terminate** runs the command and exits. Android **Suspend** is a graceful `adb emu kill` so Quick Boot can save a snapshot (next start is not a cold boot). **Terminate** force-kills the emulator and deletes that AVD’s Quick Boot snapshots so the next start is a cold boot — installed apps and userdata stay; it is not a wipe. iOS and watchOS only offer **Suspend** (`simctl shutdown` — it keeps the simulator disk, like a soft shutdown). In `--simulate`, that updates `db/demo.db` and closes the fake window if it is still open.
+4. On a device list, **`c`** closes the highlighted running device: **Back** returns to the list; **Suspend** or **Terminate** runs the command and exits (or returns to the platform list with `--sticky`). Android **Suspend** is a graceful `adb emu kill` so Quick Boot can save a snapshot (next start is not a cold boot). **Terminate** force-kills the emulator and deletes that AVD’s Quick Boot snapshots so the next start is a cold boot — installed apps and userdata stay; it is not a wipe. iOS and watchOS only offer **Suspend** (`simctl shutdown` — it keeps the simulator disk, like a soft shutdown). In `--simulate`, that updates `db/demo.db` and closes the fake window if it is still open.
 
    <img src="./docs/screens/what-close.gif" width="420" alt="Suspend a running watchOS simulator, then a running Android AVD" />
 
@@ -80,6 +78,7 @@ Installing an SDK skips the SDK list and opens the device list for that image. E
 ```bash
 npm install -g emulatorsh
 emulatorsh
+emulatorsh --sticky    # stay on the platform list after start / create / close
 ```
 
 Requires **Node.js 18+**. But let's be real, use **Node.js 22.5+** don't be a dino! 🦖

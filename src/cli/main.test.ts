@@ -35,6 +35,7 @@ test("close confirmation adds the orange simulation note", () => {
 function mockRuntime(overrides: Partial<Runtime>): Runtime {
   return {
     simulate: false,
+    sticky: false,
     listPlatforms: () => [
       { name: "Android", value: "android", runningSummary: { running: 0, total: 0 } },
       { name: "iOS", value: "ios", runningSummary: { running: 0, total: 0 } },
@@ -133,6 +134,75 @@ test("suspending a running device exits the cli", async () => {
   );
 
   assert.deepEqual(actions, ["suspend:Pixel_9_API_36"]);
+});
+
+test("sticky returns to the platform list after terminate", async () => {
+  const device: MenuItem = { name: "Pixel_9_API_36", value: "Pixel_9_API_36", running: true };
+  const platforms: string[] = [];
+  const actions: string[] = [];
+
+  await main(
+    mockRuntime({
+      sticky: true,
+      listAndroidAvds: () => [
+        device,
+        { name: "Create new device", value: "__create__", create: true },
+      ],
+      terminateDevice(item) {
+        actions.push(`terminate:${item.name}`);
+        device.running = false;
+      },
+      async pick(title, items) {
+        if (title === "Select a platform") {
+          platforms.push(title);
+          return platforms.length === 1 ? items[0]! : BACK;
+        }
+        if (title === "Close Pixel_9_API_36") {
+          return items.find((item) => item.value === CLOSE_TERMINATE)!;
+        }
+        if (title === "Select an emulator") {
+          return closeRequest(device);
+        }
+        throw new Error(`Unexpected pick: ${title}`);
+      },
+    }),
+  );
+
+  assert.deepEqual(actions, ["terminate:Pixel_9_API_36"]);
+  assert.deepEqual(platforms, ["Select a platform", "Select a platform"]);
+});
+
+test("sticky returns to the platform list after start", async () => {
+  const device: MenuItem = { name: "Pixel_9_API_36", value: "Pixel_9_API_36", running: false };
+  const platforms: string[] = [];
+  const actions: string[] = [];
+
+  await main(
+    mockRuntime({
+      sticky: true,
+      listAndroidAvds: () => [
+        device,
+        { name: "Create new device", value: "__create__", create: true },
+      ],
+      startAndroid(item) {
+        actions.push(`start:${item.name}`);
+        return 99;
+      },
+      async pick(title, items) {
+        if (title === "Select a platform") {
+          platforms.push(title);
+          return platforms.length === 1 ? items[0]! : BACK;
+        }
+        if (title === "Select an emulator") {
+          return device;
+        }
+        throw new Error(`Unexpected pick: ${title}`);
+      },
+    }),
+  );
+
+  assert.deepEqual(actions, ["start:Pixel_9_API_36"]);
+  assert.deepEqual(platforms, ["Select a platform", "Select a platform"]);
 });
 
 test("backing out of close confirmation does not stop the device", async () => {

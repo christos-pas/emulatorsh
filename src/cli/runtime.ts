@@ -12,10 +12,16 @@ import { playSuspendProgress } from "./ui/suspend-progress";
 export interface PickOptions {
   selected?: number;
   closeable?: boolean;
+  refresh?: () => MenuItem[];
+}
+
+export interface LiveRuntimeOptions {
+  sticky?: boolean;
 }
 
 export interface Runtime {
   readonly simulate: boolean;
+  readonly sticky: boolean;
   listPlatforms(): MenuItem[];
   listAndroidAvds(): MenuItem[];
   listIosSimulators(): MenuItem[];
@@ -66,10 +72,15 @@ export function runningSummary(devices: MenuItem[]): { running: number; total: n
   };
 }
 
-export function createLiveRuntime(system: System, promptOptions: PromptOptions = {}): Runtime {
+export function createLiveRuntime(
+  system: System,
+  promptOptions: PromptOptions = {},
+  options: LiveRuntimeOptions = {},
+): Runtime {
   const emulatorsh = createEmulatorsh({ system });
   return {
     simulate: system.kind === "sandbox",
+    sticky: Boolean(options.sticky),
     listPlatforms: () => emulatorsh.platforms.list().map(platformToItem),
     listAndroidAvds: () => [...emulatorsh.android.list().map(androidToItem), createNewDeviceOption()],
     listIosSimulators: () => emulatorsh.ios.list().map(appleToItem),
@@ -122,6 +133,7 @@ export function createLiveRuntime(system: System, promptOptions: PromptOptions =
           ...promptOptions,
           selected: options?.selected,
           closeable: options?.closeable,
+          refresh: options?.refresh,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

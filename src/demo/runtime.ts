@@ -108,6 +108,7 @@ export function createDemoRuntime(options: {
 
   return {
     simulate: true,
+    sticky: false,
     listPlatforms: () =>
       (["android", "ios", "watchos"] as const).map((name) => {
         const devices = name === "android" ? catalog.android : name === "ios" ? catalog.ios : catalog.watchos;

@@ -1,4 +1,14 @@
-import { GRAY, GREEN, PAGE_SIZE, PURPLE, RESET, TEAL } from "../constants";
+import {
+  GRAY,
+  GREEN,
+  MENU_REFRESH_MAX_MS,
+  MENU_REFRESH_MS,
+  MENU_REFRESH_STEP_MS,
+  PAGE_SIZE,
+  PURPLE,
+  RESET,
+  TEAL,
+} from "../constants";
 import type { Direction, Layout, MenuItem } from "../types";
 import { canCloseItem, closeRequest, type CloseRequest } from "../close";
 
@@ -248,6 +258,46 @@ export interface PromptOptions {
   onRender?: (frame: RenderFrame) => void;
   selected?: number;
   closeable?: boolean;
+  refresh?: () => MenuItem[];
+  refreshMs?: number;
+}
+
+function itemRefreshKey(item: MenuItem): string {
+  const summary = item.runningSummary;
+  return [
+    item.value,
+    item.name,
+    item.running ? "1" : "0",
+    summary ? `${summary.running}/${summary.total}` : "",
+    item.installed ? "1" : "0",
+    String(item.installedCount ?? ""),
+  ].join("\0");
+}
+
+export function menusEqual(left: MenuItem[], right: MenuItem[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((item, index) => itemRefreshKey(item) === itemRefreshKey(right[index]!));
+}
+
+export function nextRefreshDelay(currentMs: number): number {
+  return Math.min(currentMs + MENU_REFRESH_STEP_MS, MENU_REFRESH_MAX_MS);
+}
+
+export function selectionAfterRefresh(
+  previous: MenuItem[],
+  selected: number,
+  next: MenuItem[],
+): number {
+  const current = previous[selected];
+  if (current) {
+    const index = next.findIndex((item) => item.value === current.value);
+    if (index >= 0) {
+      return index;
+    }
+  }
+  return initialSelected(next, selected);
 }
 
 function initialSelected(items: MenuItem[], selected?: number): number {
@@ -267,7 +317,7 @@ export function prompt(
   if (options.keys) {
     return promptScripted(items, options.keys, options.onRender, options.selected, options.closeable);
   }
-  return promptInteractive(items, options.selected, options.closeable);
+  return promptInteractive(items, options);
 }
 
 function promptScripted(
@@ -337,8 +387,7 @@ function promptScripted(
 
 function promptInteractive(
   items: MenuItem[],
-  selectedIndex?: number,
-  closeable = false,
+  options: PromptOptions,
 ): Promise<MenuItem | CloseRequest> {
   return new Promise((resolve, reject) => {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
@@ -346,22 +395,50 @@ function promptInteractive(
       return;
     }
 
-    let selected = initialSelected(items, selectedIndex);
+    const closeable = Boolean(options.closeable);
+    let currentItems = items;
+    let selected = initialSelected(currentItems, options.selected);
     let pending = "";
     let escapeTimer: ReturnType<typeof setTimeout> | null = null;
-    const drawn = () => layoutForSelection(items, selected).drawnRows;
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    let polling = Boolean(options.refresh);
+    let lastDrawn = 0;
+
+    const paint = () => {
+      if (lastDrawn > 0) {
+        clearRendered(lastDrawn);
+      }
+      render(currentItems, selected);
+      lastDrawn = layoutForSelection(currentItems, selected).drawnRows;
+    };
 
     process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.setEncoding("utf8");
     hideCursor();
-    render(items, selected);
+    paint();
 
     const move = (direction: Direction) => {
-      const previousDrawn = drawn();
-      selected = moveSelection(items, selected, direction);
-      clearRendered(previousDrawn);
-      render(items, selected);
+      selected = moveSelection(currentItems, selected, direction);
+      paint();
+    };
+
+    const refresh = () => {
+      if (!options.refresh) {
+        return;
+      }
+      let next: MenuItem[];
+      try {
+        next = options.refresh();
+      } catch {
+        return;
+      }
+      if (menusEqual(currentItems, next)) {
+        return;
+      }
+      selected = selectionAfterRefresh(currentItems, selected, next);
+      currentItems = next;
+      paint();
     };
 
     const goBack = () => {
@@ -418,7 +495,7 @@ function promptInteractive(
           return;
         }
         if (key === "c" && closeable) {
-          const item = items[selected];
+          const item = currentItems[selected];
           if (!canCloseItem(item)) {
             continue;
           }
@@ -436,7 +513,7 @@ function promptInteractive(
           move("right");
         } else if (key === "\r" || key === "\n") {
           cleanup();
-          const chosen = items[selected];
+          const chosen = currentItems[selected];
           if (!chosen) {
             reject(new Error("No item selected."));
             return;
@@ -452,10 +529,33 @@ function promptInteractive(
         clearTimeout(escapeTimer);
         escapeTimer = null;
       }
+      polling = false;
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
       process.stdin.off("data", onData);
       restoreTerminal();
       process.stdin.pause();
     };
+
+    if (options.refresh) {
+      let delay = options.refreshMs ?? MENU_REFRESH_MS;
+      const tick = () => {
+        if (!polling) {
+          return;
+        }
+        refresh();
+        if (!polling) {
+          return;
+        }
+        delay = nextRefreshDelay(delay);
+        refreshTimer = setTimeout(tick, delay);
+        refreshTimer.unref();
+      };
+      refreshTimer = setTimeout(tick, delay);
+      refreshTimer.unref();
+    }
 
     process.stdin.on("data", onData);
   });

@@ -124,7 +124,11 @@ async function pickDevice(
   let selectedIndex: number | undefined;
   while (true) {
     const items = listDevices();
-    const picked = await runtime.pick(title, items, { closeable: true, selected: selectedIndex });
+    const picked = await runtime.pick(title, items, {
+      closeable: true,
+      selected: selectedIndex,
+      refresh: listDevices,
+    });
     if (picked === BACK) {
       return BACK;
     }
@@ -196,7 +200,9 @@ export async function createAndroidDevice(runtime: Runtime): Promise<void | type
 
 export async function main(runtime: Runtime): Promise<void> {
   while (true) {
-    const platform = await runtime.pick("Select a platform", runtime.listPlatforms());
+    const platform = await runtime.pick("Select a platform", runtime.listPlatforms(), {
+      refresh: () => runtime.listPlatforms(),
+    });
     if (platform === BACK || isCloseRequest(platform)) {
       runtime.log("Cancelled.");
       runtime.exit(0);
@@ -216,10 +222,16 @@ export async function main(runtime: Runtime): Promise<void> {
         continue;
       }
       if (device === CLOSED) {
+        if (runtime.sticky) {
+          continue;
+        }
         return;
       }
       const pid = runtime.startIos(device);
       runtime.log(startedMessage(`${device.name} (pid ${pid}, detached).`, runtime.simulate));
+      if (runtime.sticky) {
+        continue;
+      }
       return;
     }
 
@@ -228,11 +240,14 @@ export async function main(runtime: Runtime): Promise<void> {
       continue;
     }
     if (device === CLOSED) {
+      if (runtime.sticky) {
+        continue;
+      }
       return;
     }
     if (device.create) {
       const created = await createAndroidDevice(runtime);
-      if (created === BACK) {
+      if (created === BACK || runtime.sticky) {
         continue;
       }
       return;
@@ -240,6 +255,9 @@ export async function main(runtime: Runtime): Promise<void> {
 
     const pid = runtime.startAndroid(device);
     runtime.log(startedMessage(`${device.name} (pid ${pid}, detached). Logs: ${EMULATOR_LOG}`, runtime.simulate));
+    if (runtime.sticky) {
+      continue;
+    }
     return;
   }
 }

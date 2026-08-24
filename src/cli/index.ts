@@ -3,8 +3,10 @@ import { packageVersion } from "../version";
 import { main } from "./main";
 import { createLiveRuntime } from "./runtime";
 
-const HELP = `Usage: emulatorsh [--simulate] [--simulate-clear]
+const HELP = `Usage: emulatorsh [--sticky] [--simulate] [--simulate-clear]
 
+  --sticky          After create, start, suspend, or terminate, return to the
+                    platform list instead of exiting.
   --simulate        Interactive demo. Same menus as a real run, but adb,
                     emulator, sdkmanager, avdmanager, and simctl are mocked.
                     Creates ./db/demo.db if needed and stores SDKs you install
@@ -14,10 +16,24 @@ const HELP = `Usage: emulatorsh [--simulate] [--simulate-clear]
   -h, --help        Show this help.
 `;
 
-const KNOWN = new Set(["--simulate", "--simulate-clear", "--help", "-h", "--version", "-V"]);
+const KNOWN = new Set([
+  "--sticky",
+  "--simulate",
+  "--simulate-clear",
+  "--help",
+  "-h",
+  "--version",
+  "-V",
+]);
 const DEMO_DB = "./db/demo.db";
 
-function parseArgs(argv: string[]): { simulate: boolean; clear: boolean; help: boolean; version: boolean } {
+function parseArgs(argv: string[]): {
+  sticky: boolean;
+  simulate: boolean;
+  clear: boolean;
+  help: boolean;
+  version: boolean;
+} {
   const unknown = argv.filter((arg) => !KNOWN.has(arg));
   if (unknown.length > 0) {
     console.error(`Unknown argument: ${unknown[0]}`);
@@ -25,6 +41,7 @@ function parseArgs(argv: string[]): { simulate: boolean; clear: boolean; help: b
     process.exit(1);
   }
   return {
+    sticky: argv.includes("--sticky"),
     simulate: argv.includes("--simulate"),
     clear: argv.includes("--simulate-clear"),
     help: argv.includes("--help") || argv.includes("-h"),
@@ -71,11 +88,11 @@ async function boot(): Promise<void> {
       remember: (id, pid, dir) => system.store.rememberFakeWindow(id, pid, dir),
       take: (id) => system.store.takeFakeWindows(id),
     };
-    await main(createLiveRuntime(system));
+    await main(createLiveRuntime(system, {}, { sticky: options.sticky }));
     return;
   }
 
-  await main(createLiveRuntime(createHostSystem()));
+  await main(createLiveRuntime(createHostSystem(), {}, { sticky: options.sticky }));
 }
 
 void boot();
